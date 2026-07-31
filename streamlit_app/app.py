@@ -1,0 +1,641 @@
+"""
+BMDS2003 Data Science — Obesity Level Prediction App
+======================================================
+A Streamlit deployment prototype for the group project
+"Estimation of Obesity Levels Based on Eating Habits and Physical Condition".
+
+Run locally with:
+    streamlit run app.py
+
+Deploy on Streamlit Community Cloud by pushing this folder (app.py,
+requirements.txt, and the models/ folder) to a GitHub repository and
+pointing Streamlit Cloud at app.py.
+"""
+
+import json
+from pathlib import Path
+
+import joblib
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import streamlit as st
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+    auc,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import label_binarize
+
+# ============================================================
+# PAGE CONFIG (must be the first Streamlit call)
+# ============================================================
+
+st.set_page_config(
+    page_title="Obesity Level Predictor | BMDS2003",
+    page_icon="🍎",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+sns.set_theme(style="whitegrid")
+MODELS_DIR = Path(__file__).parent / "models"
+
+MODEL_FILES = {
+    "Decision Tree (Baseline)": "decision_tree_pipeline.pkl",
+    "Random Forest": "random_forest_pipeline.pkl",
+    "SVM": "svm_pipeline.pkl",
+    "KNN": "knn_pipeline.pkl",
+}
+
+RECOMMENDATIONS = {
+    "Insufficient_Weight": (
+        "Your inputs suggest an underweight profile. Consider a structured nutrition plan "
+        "that gradually increases calorie-dense, nutritious foods, and consult a healthcare "
+        "professional to rule out underlying causes."
+    ),
+    "Normal_Weight": (
+        "Your inputs suggest a healthy weight range. Keep up balanced meals, regular "
+        "physical activity, and adequate water intake to maintain this."
+    ),
+    "Overweight_Level_I": (
+        "Your inputs suggest early-stage overweight. Small, sustainable changes — more "
+        "vegetables, less frequent high-caloric snacking, and 2-3 extra active sessions a "
+        "week — can meaningfully reduce risk of progressing further."
+    ),
+    "Overweight_Level_II": (
+        "Your inputs suggest overweight. A more structured plan combining diet adjustment, "
+        "increased physical activity frequency, and reduced sedentary technology time is "
+        "recommended, ideally with professional guidance."
+    ),
+    "Obesity_Type_I": (
+        "Your inputs suggest Class I obesity. We recommend consulting a healthcare provider "
+        "or dietitian to design a supervised weight-management plan, alongside gradual "
+        "increases in physical activity."
+    ),
+    "Obesity_Type_II": (
+        "Your inputs suggest Class II obesity. Professional medical guidance is strongly "
+        "recommended to design a safe, supervised intervention plan."
+    ),
+    "Obesity_Type_III": (
+        "Your inputs suggest Class III (severe) obesity. Please consult a healthcare "
+        "professional promptly to discuss a comprehensive, medically supervised management "
+        "plan."
+    ),
+}
+
+
+# ============================================================
+# CACHED LOADERS
+# ============================================================
+
+@st.cache_resource(show_spinner="Loading trained models...")
+def load_models():
+    models = {}
+    for name, filename in MODEL_FILES.items():
+        path = MODELS_DIR / filename
+        if path.exists():
+            models[name] = joblib.load(path)
+    label_encoder = joblib.load(MODELS_DIR / "label_encoder.pkl")
+    return models, label_encoder
+
+
+@st.cache_resource(show_spinner=False)
+def load_metadata():
+    with open(MODELS_DIR / "feature_metadata.json") as f:
+        return json.load(f)
+
+
+@st.cache_data(show_spinner="Loading dataset...")
+def load_cleaned_data():
+    return pd.read_csv(MODELS_DIR / "obesity_cleaned.csv")
+
+
+@st.cache_data(show_spinner=False)
+def load_comparison_table():
+    return pd.read_csv(MODELS_DIR / "model_comparison.csv", index_col=0)
+
+
+@st.cache_data(show_spinner="Rebuilding the held-out test split for evaluation...")
+def rebuild_test_split(_metadata):
+    """Recreate the EXACT same train/test split used in the notebook (same
+    random_state, test_size, and stratification) so that live evaluation in
+    the Model Performance tab matches the notebook's reported numbers."""
+    df = load_cleaned_data()
+    exclude_cols = ["Obesity_Level", "BMI", "Age_Group"]
+    X = df.drop(columns=[c for c in exclude_cols if c in df.columns])
+    y = df["Obesity_Level"]
+
+    target_classes = _metadata["target_classes"]
+    class_to_int = {c: i for i, c in enumerate(target_classes)}
+    y_encoded = y.map(class_to_int).values
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_encoded, test_size=0.20, random_state=42, stratify=y_encoded
+    )
+    return X_train, X_test, y_train, y_test
+
+
+# ============================================================
+# LOAD EVERYTHING ONCE
+# ============================================================
+
+models, label_encoder = load_models()
+metadata = load_metadata()
+obesity_order = metadata["obesity_order"]
+best_model_name = metadata.get("best_model", "Random Forest")
+
+
+# ============================================================
+# HEADER
+# ============================================================
+
+st.title("🍎 Obesity Level Prediction System")
+st.caption(
+    "BMDS2003 Data Science Group Project — Estimation of Obesity Levels Based on "
+    "Eating Habits and Physical Condition (CRISP-DM)"
+)
+
+tab_about, tab_predict, tab_explore, tab_performance = st.tabs(
+    ["🏠 About", "🔮 Prediction", "📊 Data Exploration", "📈 Model Performance"]
+)
+
+# ============================================================
+# TAB 1 — ABOUT
+# ============================================================
+with tab_about:
+    st.header("About This Project")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.subheader("Business Understanding")
+        st.markdown(
+            """
+Obesity is a growing public-health concern linked to diabetes, cardiovascular disease, and
+reduced quality of life. Traditional diagnosis relies on clinical BMI measurement, which
+requires an in-person visit. This project explores whether **everyday lifestyle and eating
+habits alone can predict a person's obesity category**, enabling:
+
+- **Self-assessment tools** that flag risk before a clinical visit is needed.
+- **Public-health screening** at scale (schools, workplaces, community programmes).
+- **Targeted lifestyle recommendations** that highlight the *actionable* factors (diet,
+  activity, transport habits) most associated with each obesity category.
+
+**Objective:** classify an individual into one of seven clinically-defined obesity levels using
+16 lifestyle, dietary, and physical-condition attributes.
+            """
+        )
+
+        st.subheader("Dataset")
+        st.markdown(
+            """
+- **Source:** UCI Machine Learning Repository — *Estimation of Obesity Levels Based on Eating
+  Habits and Physical Condition*.
+- **Records:** 2,111 respondents (Mexico, Peru, Colombia), 17 columns (16 features + target).
+- **Target:** `Obesity_Level` — 7 classes ranging from `Insufficient_Weight` to
+  `Obesity_Type_III`.
+            """
+        )
+
+        st.subheader("CRISP-DM Workflow")
+        st.markdown(
+            """
+1. **Business Understanding** — define the prediction problem and its real-world value.
+2. **Data Understanding** — profile the dataset's structure, types, and distributions.
+3. **Data Preparation** — clean, rename, check outliers (IQR / Z-score / Modified Z-score),
+   engineer BMI (for analysis only), and demonstrate standardisation & binning techniques.
+4. **Modelling** — train 4 classifiers: a Decision Tree baseline, plus hyperparameter-tuned
+   Random Forest, SVM, and KNN models, each validated with 5-fold cross-validation.
+5. **Evaluation** — compare models with accuracy, precision, recall, F1, AUC, confusion
+   matrices, and an explicit train-vs-test *overfitting* check.
+6. **Deployment** — this Streamlit application, which lets users generate live predictions,
+   explore the data, and inspect model performance.
+            """
+        )
+
+    with col2:
+        st.subheader("Team")
+        st.markdown(
+            """
+| Member | Model Owned |
+|---|---|
+| Kyra | Decision Tree (Baseline) |
+| Liping | Random Forest |
+| Wenhsuan | Support Vector Machine |
+| Gladys | K-Nearest Neighbours |
+            """
+        )
+
+        st.subheader("Best Model")
+        st.success(f"**{best_model_name}** achieved the highest test-set accuracy.")
+
+        comparison_preview = load_comparison_table()
+        st.metric(
+            "Best Test Accuracy",
+            f"{comparison_preview.loc[best_model_name, 'Test_Accuracy']:.1%}",
+        )
+
+        st.info(
+            "Use the **Prediction** tab to try the model yourself, the **Data Exploration** "
+            "tab to browse the dataset, and the **Model Performance** tab for full evaluation "
+            "metrics."
+        )
+
+# ============================================================
+# TAB 2 — PREDICTION
+# ============================================================
+with tab_predict:
+    st.header("🔮 Predict an Obesity Level")
+    st.caption(
+        "Fill in the fields below and choose a model to generate a live prediction. "
+        "This uses the exact preprocessing + trained classifier pipeline saved from the notebook."
+    )
+
+    available_models = [m for m in MODEL_FILES if m in models]
+    default_index = (
+        available_models.index(best_model_name) if best_model_name in available_models else 0
+    )
+    chosen_model_name = st.selectbox(
+        "Choose a model for prediction", available_models, index=default_index
+    )
+
+    num_meta = metadata["numeric_features"]
+    cat_meta = metadata["categorical_features"]
+
+    with st.form("prediction_form"):
+        st.subheader("Personal & Physical Attributes")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            gender = st.selectbox("Gender", cat_meta["Gender"])
+            age = st.number_input(
+                "Age (years)",
+                min_value=float(num_meta["Age"]["min"]),
+                max_value=100.0,
+                value=round(num_meta["Age"]["mean"], 1),
+                step=1.0,
+            )
+        with c2:
+            height = st.number_input(
+                "Height (m)",
+                min_value=float(num_meta["Height"]["min"]),
+                max_value=float(num_meta["Height"]["max"]) + 0.3,
+                value=round(num_meta["Height"]["mean"], 2),
+                step=0.01,
+                format="%.2f",
+            )
+        with c3:
+            weight = st.number_input(
+                "Weight (kg)",
+                min_value=float(num_meta["Weight"]["min"]),
+                max_value=float(num_meta["Weight"]["max"]) + 50.0,
+                value=round(num_meta["Weight"]["mean"], 1),
+                step=1.0,
+            )
+
+        st.subheader("Eating Habits")
+        c4, c5, c6 = st.columns(3)
+        with c4:
+            family_history = st.selectbox(
+                "Family history of overweight?", cat_meta["Family_History_Overweight"]
+            )
+            favc = st.selectbox(
+                "Frequently eats high-caloric food?", cat_meta["Frequent_High_Caloric_Food"]
+            )
+        with c5:
+            fcvc = st.slider(
+                "Vegetable consumption frequency (1 = never, 3 = always)",
+                1.0, 3.0, round(num_meta["Vegetable_Consumption_Freq"]["mean"], 1), 0.1,
+            )
+            ncp = st.slider(
+                "Number of main meals per day",
+                1.0, 4.0, round(num_meta["Main_Meals_Per_Day"]["mean"], 1), 0.5,
+            )
+        with c6:
+            caec = st.selectbox("Eats food between meals?", cat_meta["Food_Between_Meals"])
+            calc = st.selectbox("Alcohol consumption", cat_meta["Alcohol_Consumption"])
+
+        st.subheader("Lifestyle & Physical Condition")
+        c7, c8, c9 = st.columns(3)
+        with c7:
+            smoke = st.selectbox("Smokes?", cat_meta["Smokes"])
+            scc = st.selectbox("Monitors calorie intake?", cat_meta["Calorie_Monitoring"])
+        with c8:
+            ch2o = st.slider(
+                "Daily water intake (1 = <1L, 3 = >2L)",
+                1.0, 3.0, round(num_meta["Daily_Water_Intake"]["mean"], 1), 0.1,
+            )
+            faf = st.slider(
+                "Physical activity frequency (0 = none, 3 = frequent)",
+                0.0, 3.0, round(num_meta["Physical_Activity_Freq"]["mean"], 1), 0.1,
+            )
+        with c9:
+            tue = st.slider(
+                "Technology usage time (0 = low, 2 = high)",
+                0.0, 2.0, round(num_meta["Technology_Usage_Time"]["mean"], 1), 0.1,
+            )
+            mtrans = st.selectbox("Usual transportation mode", cat_meta["Transportation_Mode"])
+
+        submitted = st.form_submit_button("Predict Obesity Level", type="primary")
+
+    if submitted:
+        input_row = pd.DataFrame([{
+            "Gender": gender,
+            "Age": age,
+            "Height": height,
+            "Weight": weight,
+            "Family_History_Overweight": family_history,
+            "Frequent_High_Caloric_Food": favc,
+            "Vegetable_Consumption_Freq": fcvc,
+            "Main_Meals_Per_Day": ncp,
+            "Food_Between_Meals": caec,
+            "Smokes": smoke,
+            "Daily_Water_Intake": ch2o,
+            "Calorie_Monitoring": scc,
+            "Physical_Activity_Freq": faf,
+            "Technology_Usage_Time": tue,
+            "Alcohol_Consumption": calc,
+            "Transportation_Mode": mtrans,
+        }])
+
+        pipeline = models[chosen_model_name]
+        pred_encoded = pipeline.predict(input_row)[0]
+        pred_label = label_encoder.inverse_transform([pred_encoded])[0]
+        bmi_value = weight / (height ** 2)
+
+        st.divider()
+        result_col, chart_col = st.columns([1, 1.3])
+
+        with result_col:
+            st.subheader("Prediction Result")
+            st.metric("Predicted Obesity Level", pred_label.replace("_", " "))
+            st.metric("Computed BMI", f"{bmi_value:.1f} kg/m²")
+            st.caption(f"Model used: **{chosen_model_name}**")
+            st.markdown("**Recommendation:**")
+            st.write(RECOMMENDATIONS.get(pred_label, "Consult a healthcare professional for guidance."))
+
+        with chart_col:
+            if hasattr(pipeline, "predict_proba"):
+                proba = pipeline.predict_proba(input_row)[0]
+                proba_df = pd.DataFrame({
+                    "Obesity_Level": label_encoder.classes_,
+                    "Probability": proba,
+                }).set_index("Obesity_Level").reindex(obesity_order)
+
+                fig, ax = plt.subplots(figsize=(7, 4.5))
+                colors = ["#C44E52" if lvl == pred_label else "#4C72B0" for lvl in proba_df.index]
+                ax.barh(proba_df.index, proba_df["Probability"], color=colors)
+                ax.set_xlabel("Predicted Probability")
+                ax.set_title(f"Class Probabilities — {chosen_model_name}")
+                ax.set_xlim(0, 1)
+                for i, v in enumerate(proba_df["Probability"]):
+                    ax.text(v + 0.01, i, f"{v:.1%}", va="center", fontsize=9)
+                plt.tight_layout()
+                st.pyplot(fig)
+            else:
+                st.info("This model does not expose class probabilities.")
+
+# ============================================================
+# TAB 3 — DATA EXPLORATION
+# ============================================================
+with tab_explore:
+    st.header("📊 Data Exploration")
+    df = load_cleaned_data()
+
+    st.caption(f"Cleaned dataset: {df.shape[0]} rows × {df.shape[1]} columns")
+
+    with st.expander("Preview raw table & summary statistics", expanded=False):
+        st.dataframe(df.head(20), width='stretch')
+        st.write("Numeric summary:")
+        st.dataframe(df.describe().T, width='stretch')
+
+    st.subheader("Filters")
+    fc1, fc2, fc3 = st.columns(3)
+    with fc1:
+        gender_filter = st.multiselect(
+            "Gender", sorted(df["Gender"].unique()), default=sorted(df["Gender"].unique())
+        )
+    with fc2:
+        level_filter = st.multiselect(
+            "Obesity Level", obesity_order, default=obesity_order
+        )
+    with fc3:
+        age_range = st.slider(
+            "Age range", int(df["Age"].min()), int(df["Age"].max()),
+            (int(df["Age"].min()), int(df["Age"].max())),
+        )
+
+    filtered = df[
+        df["Gender"].isin(gender_filter)
+        & df["Obesity_Level"].isin(level_filter)
+        & df["Age"].between(*age_range)
+    ]
+    st.caption(f"Showing {len(filtered)} of {len(df)} records after filtering.")
+
+    chart1, chart2 = st.columns(2)
+
+    with chart1:
+        st.markdown("**Obesity Level Distribution (Pie Chart)**")
+        counts = filtered["Obesity_Level"].value_counts().reindex(obesity_order).dropna()
+        fig, ax = plt.subplots(figsize=(5.5, 5.5))
+        ax.pie(counts, labels=counts.index, autopct="%1.1f%%", startangle=90,
+               colors=sns.color_palette("YlOrRd", n_colors=len(counts)))
+        ax.axis("equal")
+        st.pyplot(fig)
+
+    with chart2:
+        st.markdown("**Numeric Distribution (Histogram)**")
+        numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
+        hist_col = st.selectbox("Choose a numeric column", numeric_cols, index=numeric_cols.index("BMI") if "BMI" in numeric_cols else 0)
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.histplot(data=filtered, x=hist_col, bins=20, kde=True, ax=ax, color="#4C72B0")
+        ax.set_title(f"Distribution of {hist_col}")
+        st.pyplot(fig)
+
+    chart3, chart4 = st.columns(2)
+
+    with chart3:
+        st.markdown("**Scatterplot**")
+        num_options = filtered.select_dtypes(include=np.number).columns.tolist()
+        sx = st.selectbox("X-axis", num_options, index=num_options.index("Height") if "Height" in num_options else 0, key="sx")
+        sy = st.selectbox("Y-axis", num_options, index=num_options.index("Weight") if "Weight" in num_options else 1, key="sy")
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.scatterplot(
+            data=filtered, x=sx, y=sy, hue="Obesity_Level", hue_order=obesity_order,
+            palette=sns.color_palette("YlOrRd", n_colors=len(obesity_order)), alpha=0.75, ax=ax
+        )
+        ax.legend(fontsize=7, bbox_to_anchor=(1.02, 1), loc="upper left")
+        st.pyplot(fig)
+
+    with chart4:
+        st.markdown("**Boxplot by Obesity Level**")
+        box_col = st.selectbox("Numeric column", num_options, index=num_options.index("Weight") if "Weight" in num_options else 0, key="box")
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.boxplot(
+            data=filtered, x="Obesity_Level", y=box_col, order=obesity_order,
+            hue="Obesity_Level", hue_order=obesity_order, legend=False,
+            palette=sns.color_palette("YlOrRd", n_colors=len(obesity_order)), ax=ax
+        )
+        ax.tick_params(axis="x", rotation=45)
+        st.pyplot(fig)
+
+    st.subheader("Correlation Heatmap")
+    numeric_data = filtered.select_dtypes(include=np.number)
+    fig, ax = plt.subplots(figsize=(9, 6))
+    sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax)
+    st.pyplot(fig)
+
+    st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
+    st.caption(
+        "Build your own multidimensional summary table, similar to an OLAP cube: choose row "
+        "and column dimensions, a numeric measure, and an aggregation function."
+    )
+    categorical_options = filtered.select_dtypes(exclude=np.number).columns.tolist()
+    p1, p2, p3, p4 = st.columns(4)
+    with p1:
+        row_dim = st.selectbox("Row dimension", categorical_options, index=categorical_options.index("Gender") if "Gender" in categorical_options else 0)
+    with p2:
+        col_dim = st.selectbox("Column dimension", categorical_options, index=categorical_options.index("Obesity_Level") if "Obesity_Level" in categorical_options else 0)
+    with p3:
+        measure = st.selectbox("Measure", num_options, index=num_options.index("BMI") if "BMI" in num_options else 0)
+    with p4:
+        agg_func = st.selectbox("Aggregation", ["mean", "count", "sum", "median"])
+
+    if row_dim != col_dim:
+        pivot = pd.pivot_table(
+            filtered, index=row_dim, columns=col_dim, values=measure,
+            aggfunc=agg_func, margins=True, margins_name="All (Roll-up)"
+        ).round(2)
+        st.dataframe(pivot, width='stretch')
+    else:
+        st.warning("Choose two different dimensions for rows and columns.")
+
+# ============================================================
+# TAB 4 — MODEL PERFORMANCE
+# ============================================================
+with tab_performance:
+    st.header("📈 Model Performance")
+
+    comparison_df = load_comparison_table()
+
+    st.subheader("Consolidated Comparison Table")
+    st.dataframe(
+        comparison_df.style.highlight_max(
+            subset=["Test_Accuracy", "F1_Weighted", "AUC_Weighted_OVR"], color="#c6efce"
+        ).format(precision=4),
+        width='stretch',
+    )
+
+    st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
+    outer_metrics = ["Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted"]
+    fig, ax = plt.subplots(figsize=(10, 5))
+    comparison_df[outer_metrics].plot(kind="bar", ax=ax, colormap="viridis")
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("Score")
+    plt.xticks(rotation=20, ha="right")
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    st.subheader("Inner Comparison — Train vs Test Accuracy (Overfitting Check)")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    comparison_df[["Train_Accuracy", "Test_Accuracy"]].plot(
+        kind="bar", ax=ax, color=["#C44E52", "#4C72B0"]
+    )
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("Accuracy")
+    plt.xticks(rotation=20, ha="right")
+    plt.tight_layout()
+    st.pyplot(fig)
+    st.caption(
+        "A large gap between Train and Test accuracy signals **overfitting**; low accuracy on "
+        "both signals **underfitting**. The untuned baseline typically shows the largest gap."
+    )
+
+    st.divider()
+    st.subheader("Live Evaluation for a Selected Model")
+    st.caption(
+        "Recomputed live on the same held-out test split used in the notebook "
+        "(identical random_state and stratification), so results match exactly."
+    )
+
+    eval_model_name = st.selectbox(
+        "Choose a model to inspect", list(models.keys()),
+        index=list(models.keys()).index(best_model_name) if best_model_name in models else 0,
+        key="eval_model",
+    )
+
+    X_train, X_test, y_train, y_test = rebuild_test_split(metadata)
+    eval_pipeline = models[eval_model_name]
+    y_pred = eval_pipeline.predict(X_test)
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Test Accuracy", f"{accuracy_score(y_test, y_pred):.1%}")
+    m2.metric("Weighted Precision", f"{precision_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+    m3.metric("Weighted Recall", f"{recall_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+    m4.metric("Weighted F1", f"{f1_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+
+    cm_col, roc_col = st.columns(2)
+
+    with cm_col:
+        st.markdown("**Confusion Matrix**")
+        cm = confusion_matrix(y_test, y_pred)
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.heatmap(
+            cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_, ax=ax
+        )
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
+        ax.tick_params(axis="x", rotation=45)
+        ax.tick_params(axis="y", rotation=0)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    with roc_col:
+        st.markdown("**Per-class ROC Curves**")
+        if hasattr(eval_pipeline, "predict_proba"):
+            y_proba = eval_pipeline.predict_proba(X_test)
+            y_test_bin = label_binarize(y_test, classes=list(range(len(label_encoder.classes_))))
+            fig, ax = plt.subplots(figsize=(6, 5))
+            for i, class_name in enumerate(label_encoder.classes_):
+                fpr, tpr, _ = roc_curve(y_test_bin[:, i], y_proba[:, i])
+                roc_auc_i = auc(fpr, tpr)
+                ax.plot(fpr, tpr, label=f"{class_name} ({roc_auc_i:.2f})")
+            ax.plot([0, 1], [0, 1], color="grey", linestyle=":")
+            ax.set_xlabel("False Positive Rate")
+            ax.set_ylabel("True Positive Rate")
+            ax.legend(fontsize=6, loc="lower right")
+            plt.tight_layout()
+            st.pyplot(fig)
+        else:
+            st.info("This model does not expose class probabilities for ROC curves.")
+
+    with st.expander("Full classification report"):
+        report = classification_report(
+            y_test, y_pred, target_names=label_encoder.classes_,
+            zero_division=0, output_dict=True,
+        )
+        st.dataframe(pd.DataFrame(report).T.round(3), width='stretch')
+
+    if eval_model_name == "Random Forest":
+        st.subheader("Random Forest — Feature Importance")
+        feature_names = eval_pipeline.named_steps["preprocessor"].get_feature_names_out()
+        importances = eval_pipeline.named_steps["classifier"].feature_importances_
+        importance_df = pd.DataFrame({
+            "Feature": feature_names, "Importance": importances
+        }).sort_values("Importance", ascending=False).head(15)
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.barplot(data=importance_df, x="Importance", y="Feature", color="#55A868", ax=ax)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+st.divider()
+st.caption("BMDS2003 Data Science — Group Project | CRISP-DM Prototype | Built with Streamlit")
