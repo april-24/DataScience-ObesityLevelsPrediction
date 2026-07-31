@@ -23,7 +23,7 @@ page = st.sidebar.radio("Go to", ["About", "Data Exploration", "Model Performanc
 @st.cache_data
 def load_data():
     # Replace with your actual dataset path
-    df = pd.read_csv("ObesityDataSet_raw_and_data_sinthetic.csv")
+    df = pd.read_csv("obesity.csv")
     return df
 
 df = load_data()
