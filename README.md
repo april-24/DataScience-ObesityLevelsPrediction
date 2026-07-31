@@ -5,7 +5,7 @@ Access link: https://datascience-obesitylevelsprediction-2vpzgfxdbnnw5kcgxfum2l.
 ## Folder structure
 
 ```
-GroupX_RSWY1S2_DataScienceProject/
+DataScience-ObesityLevelsPrediction/
 ├── README.md                                    <- you are here
 ├── notebook/
 │   ├── obesity_data_science_project.ipynb        <- completed, fully-executed notebook
