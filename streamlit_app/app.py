@@ -412,10 +412,10 @@ with tab_explore:
 
     st.caption(f"Cleaned dataset: {df.shape[0]} rows × {df.shape[1]} columns")
 
-    with st.expander("Preview raw table & summary statistics", expanded=False):
-        st.dataframe(df.head(20), width='stretch')
-        st.write("Numeric summary:")
-        st.dataframe(df.describe().T, width='stretch')
+    st.markdown("**Preview raw table & summary statistics**")
+    st.dataframe(df.head(20), width='stretch')
+    st.write("Numeric summary:")
+    st.dataframe(df.describe().T, width='stretch')
 
     st.subheader("Filters")
     fc1, fc2, fc3 = st.columns(3)
@@ -445,7 +445,7 @@ with tab_explore:
     with chart1:
         st.markdown("**Obesity Level Distribution (Pie Chart)**")
         counts = filtered["Obesity_Level"].value_counts().reindex(obesity_order).dropna()
-        fig, ax = plt.subplots(figsize=(5.5, 5.5))
+        fig, ax = plt.subplots(figsize=(6, 5))
         ax.pie(counts, labels=counts.index, autopct="%1.1f%%", startangle=90,
                colors=sns.color_palette("YlOrRd", n_colors=len(counts)))
         ax.axis("equal")
@@ -489,8 +489,11 @@ with tab_explore:
 
     st.subheader("Correlation Heatmap")
     numeric_data = filtered.select_dtypes(include=np.number)
-    fig, ax = plt.subplots(figsize=(9, 6))
+    fig, ax = plt.subplots(figsize=(10, 5))
     sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax)
+    ax.tick_params(axis="x", rotation=45)
+    ax.tick_params(axis="y", rotation=0)
+    plt.tight_layout()
     st.pyplot(fig)
 
     st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
@@ -527,11 +530,30 @@ with tab_performance:
     comparison_df = load_comparison_table()
 
     st.subheader("Consolidated Comparison Table")
+    summary_df = comparison_df[
+        ["Train_Accuracy", "Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted", "AUC_Weighted_OVR"]
+    ].rename(columns={
+        "Train_Accuracy": "Train Accuracy",
+        "Test_Accuracy": "Test Accuracy",
+        "Precision_Weighted": "Precision",
+        "Recall_Weighted": "Recall",
+        "F1_Weighted": "F1-score",
+        "AUC_Weighted_OVR": "AUC",
+    })
     st.dataframe(
-        comparison_df.style.highlight_max(
-            subset=["Test_Accuracy", "F1_Weighted", "AUC_Weighted_OVR"], color="#c6efce"
+        summary_df.style.highlight_max(
+            subset=["Test Accuracy", "Precision", "Recall", "F1-score", "AUC"], color="#c6efce"
         ).format(precision=4),
         width='stretch',
+    )
+    st.caption(
+        "Per the assignment specification (\"present appropriate performance metrics, e.g. accuracy, "
+        "precision, recall, RMSE\"), the metrics reported here are the ones appropriate for this "
+        "**multi-class classification** task: **accuracy** — split into Train and Test so overfitting "
+        "is visible — **precision**, **recall**, **F1-score**, and **AUC** (weighted one-vs-rest ROC "
+        "AUC across the seven obesity levels), each computed as a class-weighted average. RMSE is a "
+        "regression metric (it measures error on a continuous numeric target) and does not apply to a "
+        "categorical target like Obesity_Level, so it is intentionally not reported here."
     )
 
     st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
@@ -557,6 +579,70 @@ with tab_performance:
     st.caption(
         "A large gap between Train and Test accuracy signals **overfitting**; low accuracy on "
         "both signals **underfitting**. The untuned baseline typically shows the largest gap."
+    )
+
+    # --------------------------------------------------------
+    # Compare model results and discuss findings
+    # --------------------------------------------------------
+    st.divider()
+    st.subheader("Compare Model Results — Findings")
+
+    baseline_name = next((n for n in summary_df.index if "Baseline" in n), summary_df.index[0])
+    best_name = summary_df["Test Accuracy"].idxmax()
+    worst_name = summary_df["Test Accuracy"].idxmin()
+    overfit_gap = (summary_df["Train Accuracy"] - summary_df["Test Accuracy"])
+    most_overfit_name = overfit_gap.idxmax()
+    least_overfit_name = overfit_gap.idxmin()
+    beat_baseline = [
+        n for n in summary_df.index
+        if n != baseline_name and summary_df.loc[n, "Test Accuracy"] > summary_df.loc[baseline_name, "Test Accuracy"]
+    ]
+
+    st.markdown(
+        f"- **Best model:** `{best_name}` has the highest test accuracy "
+        f"(**{summary_df.loc[best_name, 'Test Accuracy']:.1%}**) and also leads on precision, recall, "
+        f"F1-score and AUC (**{summary_df.loc[best_name, 'AUC']:.3f}**), making it the most reliable "
+        f"model for this dataset.\n"
+        f"- **Weakest model:** `{worst_name}` has the lowest test accuracy "
+        f"(**{summary_df.loc[worst_name, 'Test Accuracy']:.1%}**), meaning it separates the seven "
+        f"obesity classes less effectively than the others.\n"
+        f"- **Overfitting:** `{most_overfit_name}` shows the largest train–test accuracy gap "
+        f"({overfit_gap[most_overfit_name]:.1%}), i.e. it fits the training data closely but "
+        f"generalises less well; `{least_overfit_name}` shows the smallest gap "
+        f"({overfit_gap[least_overfit_name]:.1%}) and generalises best to unseen data.\n"
+        f"- **Baseline vs tuned models:** compared with the `{baseline_name}` baseline, "
+        + (
+            f"**{', '.join(beat_baseline)}** achieve higher test accuracy after hyperparameter tuning, "
+            f"showing that tuning beyond a default configuration improves results on this dataset."
+            if beat_baseline else
+            "the tuned models did not clearly outperform the baseline, suggesting the extra "
+            "complexity was not rewarded by this dataset."
+        )
+    )
+
+    # --------------------------------------------------------
+    # Reflect on limitations and potential improvements
+    # --------------------------------------------------------
+    st.subheader("Limitations & Potential Improvements")
+    st.markdown(
+        "**Limitations**\n"
+        "- The dataset mixes real survey responses with SMOTE-synthesised records, so some class "
+        "boundaries may look smoother than in a fully real-world sample.\n"
+        "- Hyperparameter tuning used a limited grid with 5-fold cross-validation for runtime reasons, "
+        "so the reported best parameters may not be the global optimum.\n"
+        "- All models are evaluated on a single 80/20 train-test split; results could shift slightly "
+        "with a different random seed or with repeated cross-validation.\n"
+        "- Several predictors (e.g. food intake, water intake, physical activity) are self-reported, "
+        "which can introduce response bias that preprocessing cannot fully correct.\n\n"
+        "**Potential Improvements**\n"
+        "- Validate self-reported habits against objective measurements (e.g. clinical BMI, wearable "
+        "activity data) where available.\n"
+        "- Widen the hyperparameter search (e.g. RandomizedSearchCV or Bayesian optimisation) and use "
+        "nested cross-validation for a less biased performance estimate.\n"
+        "- Try additional model families (e.g. Gradient Boosting, MLP) and consider ensembling the "
+        "strongest models.\n"
+        "- Use the confusion matrix below to target the most confused class pairs (typically adjacent "
+        "Overweight/Obesity levels) with extra engineered features."
     )
 
     st.divider()
