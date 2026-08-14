@@ -527,7 +527,7 @@ with tab_explore:
             hue="Obesity_Level", hue_order=obesity_order, legend=False,
             palette=sns.color_palette("YlOrRd", n_colors=len(obesity_order)), ax=ax
         )
-        ax.tick_params(axis="x", rotation=45)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")        
         st.pyplot(fig)
 
     st.subheader("Correlation Heatmap")
