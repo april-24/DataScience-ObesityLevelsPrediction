@@ -264,18 +264,34 @@ with tab_predict:
     default_index = (
         available_models.index(best_model_name) if best_model_name in available_models else 0
     )
-    chosen_model_name = st.selectbox(
-        "Choose a model for prediction", available_models, index=default_index
+    st.markdown("**Choose a model for prediction**")
+    chosen_model_name = st.segmented_control(
+        "Choose a model for prediction",
+        available_models,
+        default=available_models[default_index],
+        label_visibility="collapsed",
     )
+    if chosen_model_name is None:
+        chosen_model_name = available_models[default_index]
+    st.caption(f"Using **{chosen_model_name}**" + (" (best on test set)" if chosen_model_name == best_model_name else ""))
 
     num_meta = metadata["numeric_features"]
     cat_meta = metadata["categorical_features"]
+
+    # Logical (non-alphabetical) ordering for the two ordinal frequency fields
+    FREQUENCY_ORDER = ["no", "Sometimes", "Frequently", "Always"]
+    freq_label = lambda x: "Never" if x == "no" else x  # noqa: E731
+    yes_no_label = lambda x: "✅ Yes" if x == "yes" else "❌ No"  # noqa: E731
 
     with st.form("prediction_form"):
         st.subheader("Personal & Physical Attributes")
         c1, c2, c3 = st.columns(3)
         with c1:
-            gender = st.selectbox("Gender", cat_meta["Gender"])
+            st.markdown("**Gender**")
+            gender = st.radio(
+                "Gender", cat_meta["Gender"], horizontal=True, label_visibility="collapsed",
+                format_func=lambda x: "👩 Female" if x == "Female" else "👨 Male",
+            )
             age = st.number_input(
                 "Age (years)",
                 min_value=float(num_meta["Age"]["min"]),
@@ -304,11 +320,15 @@ with tab_predict:
         st.subheader("Eating Habits")
         c4, c5, c6 = st.columns(3)
         with c4:
-            family_history = st.selectbox(
-                "Family history of overweight?", cat_meta["Family_History_Overweight"]
+            st.markdown("**Family history of overweight?**")
+            family_history = st.radio(
+                "Family history of overweight?", cat_meta["Family_History_Overweight"],
+                horizontal=True, label_visibility="collapsed", format_func=yes_no_label,
             )
-            favc = st.selectbox(
-                "Frequently eats high-caloric food?", cat_meta["Frequent_High_Caloric_Food"]
+            st.markdown("**Frequently eats high-caloric food?**")
+            favc = st.radio(
+                "Frequently eats high-caloric food?", cat_meta["Frequent_High_Caloric_Food"],
+                horizontal=True, label_visibility="collapsed", format_func=yes_no_label,
             )
         with c5:
             fcvc = st.slider(
@@ -320,14 +340,30 @@ with tab_predict:
                 1.0, 4.0, round(num_meta["Main_Meals_Per_Day"]["mean"], 1), 0.5,
             )
         with c6:
-            caec = st.selectbox("Eats food between meals?", cat_meta["Food_Between_Meals"])
-            calc = st.selectbox("Alcohol consumption", cat_meta["Alcohol_Consumption"])
+            st.markdown("**Eats food between meals?**")
+            caec = st.select_slider(
+                "Eats food between meals?", options=FREQUENCY_ORDER, value="Sometimes",
+                label_visibility="collapsed", format_func=freq_label,
+            )
+            st.markdown("**Alcohol consumption**")
+            calc = st.select_slider(
+                "Alcohol consumption", options=FREQUENCY_ORDER, value="Sometimes",
+                label_visibility="collapsed", format_func=freq_label,
+            )
 
         st.subheader("Lifestyle & Physical Condition")
         c7, c8, c9 = st.columns(3)
         with c7:
-            smoke = st.selectbox("Smokes?", cat_meta["Smokes"])
-            scc = st.selectbox("Monitors calorie intake?", cat_meta["Calorie_Monitoring"])
+            st.markdown("**Smokes?**")
+            smoke = st.radio(
+                "Smokes?", cat_meta["Smokes"], horizontal=True,
+                label_visibility="collapsed", format_func=yes_no_label,
+            )
+            st.markdown("**Monitors calorie intake?**")
+            scc = st.radio(
+                "Monitors calorie intake?", cat_meta["Calorie_Monitoring"], horizontal=True,
+                label_visibility="collapsed", format_func=yes_no_label,
+            )
         with c8:
             ch2o = st.slider(
                 "Daily water intake (1 = <1L, 3 = >2L)",
@@ -342,7 +378,14 @@ with tab_predict:
                 "Technology usage time (0 = low, 2 = high)",
                 0.0, 2.0, round(num_meta["Technology_Usage_Time"]["mean"], 1), 0.1,
             )
-            mtrans = st.selectbox("Usual transportation mode", cat_meta["Transportation_Mode"])
+            st.markdown("**Usual transportation mode**")
+            mtrans = st.pills(
+                "Usual transportation mode", cat_meta["Transportation_Mode"],
+                default=cat_meta["Transportation_Mode"][0], label_visibility="collapsed",
+                format_func=lambda x: x.replace("_", " "),
+            )
+            if mtrans is None:
+                mtrans = cat_meta["Transportation_Mode"][0]
 
         submitted = st.form_submit_button("Predict Obesity Level", type="primary")
 
@@ -412,10 +455,10 @@ with tab_explore:
 
     st.caption(f"Cleaned dataset: {df.shape[0]} rows × {df.shape[1]} columns")
 
-    st.markdown("**Preview raw table & summary statistics**")
-    st.dataframe(df.head(20), width='stretch')
-    st.write("Numeric summary:")
-    st.dataframe(df.describe().T, width='stretch')
+    with st.expander("Preview raw table & summary statistics", expanded=False):
+        st.dataframe(df.head(20), width='stretch')
+        st.write("Numeric summary:")
+        st.dataframe(df.describe().T, width='stretch')
 
     st.subheader("Filters")
     fc1, fc2, fc3 = st.columns(3)
@@ -445,7 +488,7 @@ with tab_explore:
     with chart1:
         st.markdown("**Obesity Level Distribution (Pie Chart)**")
         counts = filtered["Obesity_Level"].value_counts().reindex(obesity_order).dropna()
-        fig, ax = plt.subplots(figsize=(6, 5))
+        fig, ax = plt.subplots(figsize=(5.5, 5.5))
         ax.pie(counts, labels=counts.index, autopct="%1.1f%%", startangle=90,
                colors=sns.color_palette("YlOrRd", n_colors=len(counts)))
         ax.axis("equal")
@@ -489,11 +532,8 @@ with tab_explore:
 
     st.subheader("Correlation Heatmap")
     numeric_data = filtered.select_dtypes(include=np.number)
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(9, 6))
     sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax)
-    ax.tick_params(axis="x", rotation=45)
-    ax.tick_params(axis="y", rotation=0)
-    plt.tight_layout()
     st.pyplot(fig)
 
     st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
@@ -530,31 +570,13 @@ with tab_performance:
     comparison_df = load_comparison_table()
 
     st.subheader("Consolidated Comparison Table")
-    summary_df = comparison_df[
-        ["Train_Accuracy", "Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted", "AUC_Weighted_OVR"]
-    ].rename(columns={
-        "Train_Accuracy": "Train Accuracy",
-        "Test_Accuracy": "Test Accuracy",
-        "Precision_Weighted": "Precision",
-        "Recall_Weighted": "Recall",
-        "F1_Weighted": "F1-score",
-        "AUC_Weighted_OVR": "AUC",
-    })
-    st.dataframe(
-        summary_df.style.highlight_max(
-            subset=["Test Accuracy", "Precision", "Recall", "F1-score", "AUC"], color="#c6efce"
-        ).format(precision=4),
-        width='stretch',
-    )
     st.caption(
-        "Per the assignment specification (\"present appropriate performance metrics, e.g. accuracy, "
-        "precision, recall, RMSE\"), the metrics reported here are the ones appropriate for this "
-        "**multi-class classification** task: **accuracy** — split into Train and Test so overfitting "
-        "is visible — **precision**, **recall**, **F1-score**, and **AUC** (weighted one-vs-rest ROC "
-        "AUC across the seven obesity levels), each computed as a class-weighted average. RMSE is a "
-        "regression metric (it measures error on a continuous numeric target) and does not apply to a "
-        "categorical target like Obesity_Level, so it is intentionally not reported here."
+        "`Train_Accuracy_InSample` is the model scored on the exact rows it was fit on — it is "
+        "expected to sit near/at 1.0 for flexible models (Decision Tree, KNN) and is **not** a "
+        "reliable overfitting signal by itself. `Train_Accuracy_CV` (cross-validated on held-out "
+        "training folds) is the one to trust for the overfitting check below."
     )
+    st.dataframe(comparison_df.style.format(precision=4), width='stretch')
 
     st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
     outer_metrics = ["Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted"]
@@ -567,83 +589,62 @@ with tab_performance:
     st.pyplot(fig)
 
     st.subheader("Inner Comparison — Train vs Test Accuracy (Overfitting Check)")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    comparison_df[["Train_Accuracy", "Test_Accuracy"]].plot(
-        kind="bar", ax=ax, color=["#C44E52", "#4C72B0"]
-    )
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Accuracy")
-    plt.xticks(rotation=20, ha="right")
-    plt.tight_layout()
-    st.pyplot(fig)
-    st.caption(
-        "A large gap between Train and Test accuracy signals **overfitting**; low accuracy on "
-        "both signals **underfitting**. The untuned baseline typically shows the largest gap."
-    )
+    inner_tab1, inner_tab2 = st.tabs(["Cross-validated (trust this)", "In-sample (for transparency)"])
 
-    # --------------------------------------------------------
-    # Compare model results and discuss findings
-    # --------------------------------------------------------
-    st.divider()
-    st.subheader("Compare Model Results — Findings")
-
-    baseline_name = next((n for n in summary_df.index if "Baseline" in n), summary_df.index[0])
-    best_name = summary_df["Test Accuracy"].idxmax()
-    worst_name = summary_df["Test Accuracy"].idxmin()
-    overfit_gap = (summary_df["Train Accuracy"] - summary_df["Test Accuracy"])
-    most_overfit_name = overfit_gap.idxmax()
-    least_overfit_name = overfit_gap.idxmin()
-    beat_baseline = [
-        n for n in summary_df.index
-        if n != baseline_name and summary_df.loc[n, "Test Accuracy"] > summary_df.loc[baseline_name, "Test Accuracy"]
-    ]
-
-    st.markdown(
-        f"- **Best model:** `{best_name}` has the highest test accuracy "
-        f"(**{summary_df.loc[best_name, 'Test Accuracy']:.1%}**) and also leads on precision, recall, "
-        f"F1-score and AUC (**{summary_df.loc[best_name, 'AUC']:.3f}**), making it the most reliable "
-        f"model for this dataset.\n"
-        f"- **Weakest model:** `{worst_name}` has the lowest test accuracy "
-        f"(**{summary_df.loc[worst_name, 'Test Accuracy']:.1%}**), meaning it separates the seven "
-        f"obesity classes less effectively than the others.\n"
-        f"- **Overfitting:** `{most_overfit_name}` shows the largest train–test accuracy gap "
-        f"({overfit_gap[most_overfit_name]:.1%}), i.e. it fits the training data closely but "
-        f"generalises less well; `{least_overfit_name}` shows the smallest gap "
-        f"({overfit_gap[least_overfit_name]:.1%}) and generalises best to unseen data.\n"
-        f"- **Baseline vs tuned models:** compared with the `{baseline_name}` baseline, "
-        + (
-            f"**{', '.join(beat_baseline)}** achieve higher test accuracy after hyperparameter tuning, "
-            f"showing that tuning beyond a default configuration improves results on this dataset."
-            if beat_baseline else
-            "the tuned models did not clearly outperform the baseline, suggesting the extra "
-            "complexity was not rewarded by this dataset."
+    with inner_tab1:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        comparison_df[["Train_Accuracy_CV", "Test_Accuracy"]].plot(
+            kind="bar", ax=ax, color=["#DD8452", "#4C72B0"]
         )
-    )
+        ax.set_ylim(0, 1.05)
+        ax.set_ylabel("Accuracy")
+        plt.xticks(rotation=20, ha="right")
+        plt.tight_layout()
+        st.pyplot(fig)
+        st.caption(
+            "Each fold's model is scored on held-out rows of the training data, so this number "
+            "cannot trivially reach 1.0 through memorisation — this is the meaningful overfitting "
+            "check. All four models here show a small gap (a few percentage points either way), "
+            "indicating **no serious overfitting** once measured correctly."
+        )
 
-    # --------------------------------------------------------
-    # Reflect on limitations and potential improvements
-    # --------------------------------------------------------
-    st.subheader("Limitations & Potential Improvements")
-    st.markdown(
-        "**Limitations**\n"
-        "- The dataset mixes real survey responses with SMOTE-synthesised records, so some class "
-        "boundaries may look smoother than in a fully real-world sample.\n"
-        "- Hyperparameter tuning used a limited grid with 5-fold cross-validation for runtime reasons, "
-        "so the reported best parameters may not be the global optimum.\n"
-        "- All models are evaluated on a single 80/20 train-test split; results could shift slightly "
-        "with a different random seed or with repeated cross-validation.\n"
-        "- Several predictors (e.g. food intake, water intake, physical activity) are self-reported, "
-        "which can introduce response bias that preprocessing cannot fully correct.\n\n"
-        "**Potential Improvements**\n"
-        "- Validate self-reported habits against objective measurements (e.g. clinical BMI, wearable "
-        "activity data) where available.\n"
-        "- Widen the hyperparameter search (e.g. RandomizedSearchCV or Bayesian optimisation) and use "
-        "nested cross-validation for a less biased performance estimate.\n"
-        "- Try additional model families (e.g. Gradient Boosting, MLP) and consider ensembling the "
-        "strongest models.\n"
-        "- Use the confusion matrix below to target the most confused class pairs (typically adjacent "
-        "Overweight/Obesity levels) with extra engineered features."
+    with inner_tab2:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        comparison_df[["Train_Accuracy_InSample", "Test_Accuracy"]].plot(
+            kind="bar", ax=ax, color=["#C44E52", "#4C72B0"]
+        )
+        ax.set_ylim(0, 1.05)
+        ax.set_ylabel("Accuracy")
+        plt.xticks(rotation=20, ha="right")
+        plt.tight_layout()
+        st.pyplot(fig)
+        st.caption(
+            "In-sample accuracy = fit and predict on the SAME training rows. It measures "
+            "memorisation, not generalisation, and is expected to be very high — exactly 1.0 for "
+            "the Decision Tree (unconstrained by default) and KNN (weights='distance', so every "
+            "training point's nearest neighbour during scoring is itself, at distance 0). It is "
+            "shown here for transparency, not as an overfitting diagnostic."
+        )
+
+    st.subheader("Weighted vs Macro-averaged Metrics")
+    st.caption(
+        "Weighted Recall is mathematically identical to Accuracy for any single-label multiclass "
+        "problem (not a computation quirk). Macro metrics weight every class equally regardless "
+        "of size and diverge more visibly whenever a model is weaker on specific classes — see "
+        "how much further KNN's macro scores drop below its weighted scores below."
     )
+    macro_metric_tabs = st.tabs(["Precision", "Recall", "F1"])
+    for tab, metric in zip(macro_metric_tabs, ["Precision", "Recall", "F1"]):
+        with tab:
+            fig, ax = plt.subplots(figsize=(9, 4.5))
+            comparison_df[[f"{metric}_Weighted", f"{metric}_Macro"]].plot(
+                kind="bar", ax=ax, color=["#4C72B0", "#C44E52"]
+            )
+            ax.set_ylim(0, 1.05)
+            ax.set_ylabel(metric)
+            plt.xticks(rotation=20, ha="right")
+            plt.tight_layout()
+            st.pyplot(fig)
 
     st.divider()
     st.subheader("Live Evaluation for a Selected Model")
@@ -662,11 +663,19 @@ with tab_performance:
     eval_pipeline = models[eval_model_name]
     y_pred = eval_pipeline.predict(X_test)
 
+    st.markdown("**Weighted-average metrics**")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Test Accuracy", f"{accuracy_score(y_test, y_pred):.1%}")
-    m2.metric("Weighted Precision", f"{precision_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
-    m3.metric("Weighted Recall", f"{recall_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
-    m4.metric("Weighted F1", f"{f1_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+    m2.metric("Precision", f"{precision_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+    m3.metric("Recall", f"{recall_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+    m4.metric("F1", f"{f1_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+
+    st.markdown("**Macro-average metrics** (every class counted equally)")
+    m5, m6, m7, m8 = st.columns(4)
+    m5.metric("—", "")
+    m6.metric("Precision", f"{precision_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
+    m7.metric("Recall", f"{recall_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
+    m8.metric("F1", f"{f1_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
 
     cm_col, roc_col = st.columns(2)
 
