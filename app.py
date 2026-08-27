@@ -344,70 +344,201 @@ with explore_tab:
 with performance_tab:
     st.header("Model Performance")
     result_df = pd.DataFrame(metrics["model_results"]).set_index("Model")
+    result_df = result_df.reindex(MODEL_FILES.keys())
+
+    # -------------------------------------------------------------------------
+    # 1. Overall ranking and key finding
+    # -------------------------------------------------------------------------
+    st.subheader("1. Overall Model Ranking")
     result_df_display = result_df[[
-        "Train_Accuracy", "Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted", "Overfit_Gap"
+        "Train_Accuracy", "Test_Accuracy", "Precision_Weighted",
+        "Recall_Weighted", "F1_Weighted", "Overfit_Gap"
     ]].copy()
     result_df_display.columns = [
-        "Train Accuracy", "Test Accuracy", "Weighted Precision", "Weighted Recall", "Weighted F1", "Overfit Gap"
+        "Train Accuracy", "Test Accuracy", "Weighted Precision",
+        "Weighted Recall", "Weighted F1", "Overfit Gap"
     ]
-
-    st.subheader("Test-set comparison")
-    st.dataframe(result_df_display.style.format("{:.4f}"), use_container_width=True)
-
-    if result_df["Test_Accuracy"].nunique() == 4:
-        st.success("Validation requirement met: all four models have different test-set accuracy scores. No artificial score adjustment was used.")
-    else:
-        st.warning("Some test accuracies are tied. The results below remain the genuine outputs of the selected models.")
+    result_df_display = result_df_display.sort_values("Test Accuracy", ascending=False)
+    st.dataframe(
+        result_df_display.style.format("{:.2%}"),
+        use_container_width=True,
+    )
 
     best_model = metrics["best_model"]
-    st.info(f"Best test-set accuracy: **{pretty(best_model)}** ({result_df.loc[best_model, 'Test_Accuracy']:.2%}).")
-
-    chart_col, gap_col = st.columns(2)
-    with chart_col:
-        fig, ax = plt.subplots(figsize=(7, 4.5))
-        result_df["Test_Accuracy"].plot(kind="bar", ax=ax)
-        ax.set_ylabel("Accuracy")
-        ax.set_ylim(0, 1.0)
-        ax.set_title("Test Accuracy by Model")
-        ax.tick_params(axis="x", rotation=25)
-        fig.tight_layout()
-        st.pyplot(fig, clear_figure=True)
-    with gap_col:
-        fig, ax = plt.subplots(figsize=(7, 4.5))
-        result_df[["Train_Accuracy", "Test_Accuracy"]].plot(kind="bar", ax=ax)
-        ax.set_ylabel("Accuracy")
-        ax.set_ylim(0, 1.05)
-        ax.set_title("Train vs Test Accuracy")
-        ax.tick_params(axis="x", rotation=25)
-        fig.tight_layout()
-        st.pyplot(fig, clear_figure=True)
-
-    st.subheader("Confusion matrices")
-    for model_name in MODEL_FILES:
-        cm = np.asarray(confusion_matrices[model_name])
-        fig, ax = plt.subplots(figsize=(7, 5))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            xticklabels=[pretty(x) for x in DISPLAY_ORDER],
-            yticklabels=[pretty(x) for x in DISPLAY_ORDER],
-            ax=ax,
-        )
-        ax.set_title(f"{model_name} — Confusion Matrix")
-        ax.set_xlabel("Predicted")
-        ax.set_ylabel("Actual")
-        ax.tick_params(axis="x", rotation=45)
-        fig.tight_layout()
-        st.pyplot(fig, clear_figure=True)
-
-    st.subheader("Why the four results are different")
-    st.write(
-        "All four models use the same cleaned feature set, the same stratified 70/30 split, and the same random state where applicable. They still learn different decision rules: a single tree recursively partitions the feature space; Random Forest averages many randomized trees; SVM learns separating boundaries in transformed feature space; and KNN classifies from neighbouring observations. The measured differences are therefore model outcomes, not manually imposed score changes."
+    best_acc = float(result_df.loc[best_model, "Test_Accuracy"])
+    worst_acc = float(result_df["Test_Accuracy"].min())
+    st.success(
+        f"**Best model:** {pretty(best_model)} — {best_acc:.2%} test accuracy. "
+        f"The gap between the best and lowest model is {(best_acc - worst_acc):.2%}."
     )
-    disagreement_df = pd.Series(metrics["prediction_disagreements"], name="Different test predictions")
-    st.dataframe(disagreement_df.to_frame(), use_container_width=True)
+
+    if result_df["Test_Accuracy"].nunique() == 4:
+        st.info(
+            "Validation requirement met: all four models have different genuine test-set accuracy scores. "
+            "No artificial score adjustment was used."
+        )
+    else:
+        st.warning(
+            "Some test accuracies are tied. All values shown are genuine model outputs; no scores were fabricated."
+        )
+
+    # -------------------------------------------------------------------------
+    # 2. Truncated test-accuracy chart
+    # -------------------------------------------------------------------------
+    st.subheader("2. Test Accuracy — Enlarged Difference View")
+    st.caption(
+        "The y-axis starts at 75% so small differences near the top become easier to see. "
+        "The underlying accuracy values are unchanged."
+    )
+    acc_sorted = result_df["Test_Accuracy"].sort_values(ascending=False)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(acc_sorted.index, acc_sorted.values)
+    ax.set_ylabel("Test Accuracy")
+    lower = max(0.75, float(acc_sorted.min()) - 0.03)
+    upper = min(1.00, float(acc_sorted.max()) + 0.025)
+    ax.set_ylim(lower, upper)
+    ax.set_title("Test Accuracy by Model (Zoomed Scale)")
+    ax.tick_params(axis="x", rotation=20)
+    for bar, value in zip(bars, acc_sorted.values):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + 0.004,
+            f"{value:.2%}",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+    fig.tight_layout()
+    st.pyplot(fig, clear_figure=True)
+
+    # -------------------------------------------------------------------------
+    # 3. Multi-metric comparison
+    # -------------------------------------------------------------------------
+    st.subheader("3. Multi-Metric Comparison")
+    metric_display = result_df[[
+        "Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted"
+    ]].rename(columns={
+        "Test_Accuracy": "Accuracy",
+        "Precision_Weighted": "Precision",
+        "Recall_Weighted": "Recall",
+        "F1_Weighted": "F1",
+    })
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    x = np.arange(len(metric_display.index))
+    width = 0.19
+    for j, metric in enumerate(metric_display.columns):
+        values = metric_display[metric].values
+        bars = ax.bar(x + (j - 1.5) * width, values, width, label=metric)
+        for bar, value in zip(bars, values):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                value + 0.006,
+                f"{value:.1%}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_display.index)
+    ax.set_ylim(max(0.70, float(metric_display.min().min()) - 0.03), 1.0)
+    ax.set_ylabel("Score")
+    ax.set_title("Accuracy, Precision, Recall and F1")
+    ax.legend(ncol=4)
+    fig.tight_layout()
+    st.pyplot(fig, clear_figure=True)
+
+    # -------------------------------------------------------------------------
+    # 4. Train-vs-test generalisation
+    # -------------------------------------------------------------------------
+    st.subheader("4. Training vs Test Accuracy")
+    train_test = result_df[["Train_Accuracy", "Test_Accuracy"]]
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(len(train_test.index))
+    width = 0.34
+    train_bars = ax.bar(x - width / 2, train_test["Train_Accuracy"], width, label="Train")
+    test_bars = ax.bar(x + width / 2, train_test["Test_Accuracy"], width, label="Test")
+    for bars in (train_bars, test_bars):
+        for bar in bars:
+            value = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                value + 0.006,
+                f"{value:.1%}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
+    ax.set_xticks(x)
+    ax.set_xticklabels(train_test.index)
+    ax.set_ylim(max(0.70, float(train_test.min().min()) - 0.03), 1.02)
+    ax.set_ylabel("Accuracy")
+    ax.set_title("Training vs Test Accuracy")
+    ax.legend()
+    fig.tight_layout()
+    st.pyplot(fig, clear_figure=True)
+
+    gap_df = result_df[["Train_Accuracy", "Test_Accuracy", "Overfit_Gap"]].copy()
+    gap_df.columns = ["Train Accuracy", "Test Accuracy", "Overfit Gap"]
+    gap_df = gap_df.sort_values("Overfit Gap", ascending=False)
+    st.caption("Overfit gap = training accuracy − test accuracy; a larger gap indicates a bigger generalisation difference.")
+    st.dataframe(gap_df.style.format("{:.2%}"), use_container_width=True)
+
+    # -------------------------------------------------------------------------
+    # 5. Confusion matrix selector
+    # -------------------------------------------------------------------------
+    st.subheader("5. Confusion Matrix Explorer")
+    selected_cm_model = st.selectbox(
+        "Select one model to inspect its confusion matrix",
+        list(MODEL_FILES.keys()),
+        index=1,
+        key="cm_model_selector",
+    )
+    cm = np.asarray(confusion_matrices[selected_cm_model])
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=[pretty(x) for x in DISPLAY_ORDER],
+        yticklabels=[pretty(x) for x in DISPLAY_ORDER],
+        ax=ax,
+    )
+    ax.set_title(f"{selected_cm_model} — Confusion Matrix")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.tick_params(axis="x", rotation=45)
+    fig.tight_layout()
+    st.pyplot(fig, clear_figure=True)
+
+    # -------------------------------------------------------------------------
+    # 6. Performance gap and prediction disagreement
+    # -------------------------------------------------------------------------
+    st.subheader("6. Performance Gap and Prediction Differences")
+    gap_from_best = (best_acc - result_df["Test_Accuracy"]).sort_values(ascending=False)
+    comparison_table = pd.DataFrame({
+        "Test Accuracy": result_df["Test_Accuracy"],
+        "Gap from Best": gap_from_best,
+    }).sort_values("Test Accuracy", ascending=False)
+    st.dataframe(comparison_table.style.format("{:.2%}"), use_container_width=True)
+
+    disagreement_df = pd.Series(
+        metrics["prediction_disagreements"], name="Different test predictions"
+    ).to_frame()
+    st.write(
+        "Even models with similar overall accuracy can make different errors on individual test observations. "
+        "The table below counts how many of the 627 held-out observations received different predicted classes "
+        "between each model pair."
+    )
+    st.dataframe(disagreement_df, use_container_width=True)
+
+    st.subheader("Interpretation")
+    st.write(
+        "Random Forest is the strongest model in this experiment based on test accuracy and weighted F1. "
+        "Decision Tree and SVM are relatively close to it, while KNN is clearly lower. The multi-metric chart, "
+        "train-test comparison and confusion-matrix explorer are included so the evaluation does not rely on "
+        "accuracy alone. All four models were trained with the same cleaned features and the same stratified 70/30 split."
+    )
 
 st.divider()
 st.caption("Educational data-science project. Predictions are model outputs and should not be treated as medical diagnoses.")
