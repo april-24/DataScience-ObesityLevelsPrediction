@@ -1,0 +1,95 @@
+{
+  "numeric_features": {
+    "Age": {
+      "min": 14.0,
+      "max": 61.0,
+      "mean": 24.353089797316724
+    },
+    "Height": {
+      "min": 1.45,
+      "max": 1.98,
+      "mean": 1.7026741221849544
+    },
+    "Weight": {
+      "min": 39.0,
+      "max": 173.0,
+      "mean": 86.85872961427887
+    },
+    "Vegetable_Consumption_Freq": {
+      "min": 1.0,
+      "max": 3.0,
+      "mean": 2.4214661729755633
+    },
+    "Main_Meals_Per_Day": {
+      "min": 1.0,
+      "max": 4.0,
+      "mean": 2.701179114997604
+    },
+    "Daily_Water_Intake": {
+      "min": 1.0,
+      "max": 3.0,
+      "mean": 2.004749436511739
+    },
+    "Physical_Activity_Freq": {
+      "min": 0.0,
+      "max": 3.0,
+      "mean": 1.0128119003354095
+    },
+    "Technology_Usage_Time": {
+      "min": 0.0,
+      "max": 2.0,
+      "mean": 0.6630354408241496
+    }
+  },
+  "categorical_features": {
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "Family_History_Overweight": [
+      "no",
+      "yes"
+    ],
+    "Frequent_High_Caloric_Food": [
+      "no",
+      "yes"
+    ],
+    "Food_Between_Meals": [
+      "Always",
+      "Frequently",
+      "Sometimes",
+      "no"
+    ],
+    "Smokes": [
+      "no",
+      "yes"
+    ],
+    "Calorie_Monitoring": [
+      "no",
+      "yes"
+    ],
+    "Alcohol_Consumption": [
+      "Always",
+      "Frequently",
+      "Sometimes",
+      "no"
+    ],
+    "Transportation_Mode": [
+      "Automobile",
+      "Bike",
+      "Motorbike",
+      "Public_Transportation",
+      "Walking"
+    ]
+  },
+  "target_order": [
+    "Insufficient_Weight",
+    "Normal_Weight",
+    "Overweight_Level_I",
+    "Overweight_Level_II",
+    "Obesity_Type_I",
+    "Obesity_Type_II",
+    "Obesity_Type_III"
+  ],
+  "best_model": "Random Forest"
+}
