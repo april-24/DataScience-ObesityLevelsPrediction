@@ -1,4 +1,3 @@
-```python
 """
 BMDS2003 Data Science — Obesity Level Prediction App
 ======================================================
