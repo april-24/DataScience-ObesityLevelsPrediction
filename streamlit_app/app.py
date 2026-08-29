@@ -1156,32 +1156,33 @@ with tab_explore:
                 
                 fig.update_layout(
                     height=450,
-                
-                    margin=dict(
-                        l=5,
-                        r=5,
-                        t=5,
-                        b=5
-                    ),
+                    margin=dict(l=5, r=5, t=5, b=5),
                 
                     legend=dict(
                         title="Obesity Level",
-                        traceorder="normal",
                         orientation="h",
-                
-                        # Put legend closer to pie
-                        yanchor="top",
-                        y=0.02,
-                
+                        yanchor="bottom",
+                        y=0,
                         xanchor="center",
                         x=0.5,
-                
-                        font=dict(
-                            size=10
-                        )
+                        font=dict(size=10)
                     )
                 )
-
+                
+                fig.update_traces(
+                    textinfo="percent",
+                    textposition="inside",
+                    domain=dict(
+                        x=[0.05, 0.95],
+                        y=[0.15, 0.98]
+                    ),
+                    hovertemplate=(
+                        "<b>Obesity Level:</b> %{label}<br>"
+                        "<b>Count:</b> %{value}<br>"
+                        "<b>Percentage:</b> %{percent}"
+                        "<extra></extra>"
+                    )
+                )
         # ====================================================
         # 2. HISTOGRAM
         # ====================================================
