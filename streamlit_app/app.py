@@ -512,6 +512,7 @@ with tab_explore:
     
 # OBESITY LEVEL PIE CHART
     with chart1:
+        
     st.markdown("**Obesity Level Distribution (Interactive Pie Chart)**")
 
     counts = (
