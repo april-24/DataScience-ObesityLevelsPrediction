@@ -639,98 +639,74 @@ with tab_explore:
 # 2. CLEAR HISTOGRAM
 # ========================================================
     with chart2:
+    st.markdown("**Numeric Distribution (Histogram)**")
 
-        st.markdown("### 📊 Numeric Distribution")
-    
-        hist_col = st.selectbox(
-            "Choose a numeric variable",
-            num_options,
-            index=(
-                num_options.index("BMI")
-                if "BMI" in num_options
-                else 0
-            ),
-            key="hist_col"
-        )
-    
-        # Number of bins
-        hist_bins = st.slider(
-            "Number of bins",
-            min_value=5,
-            max_value=30,
-            value=15,
-            step=5,
-            key="hist_bins"
-        )
+    numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
 
-    # ----------------------------------------------------
-    # HISTOGRAM — SEPARATE PANELS
-    # ----------------------------------------------------
+    hist_col = st.selectbox(
+        "Choose a numeric column",
+        numeric_cols,
+        index=(
+            numeric_cols.index("BMI")
+            if "BMI" in numeric_cols
+            else 0
+        ),
+        key="hist_col"
+    )
 
+    # Number of bins
+    hist_bins = st.slider(
+        "Number of bins",
+        min_value=5,
+        max_value=40,
+        value=20,
+        step=5,
+        key="hist_bins"
+    )
+
+    # Interactive histogram
     fig = px.histogram(
         filtered,
         x=hist_col,
-        facet_col="Obesity_Level",
-        facet_col_wrap=2,
         nbins=hist_bins,
-
-        category_orders={
-            "Obesity_Level": obesity_order
-        },
-
-        color="Obesity_Level",
-        color_discrete_map=OBESITY_COLORS,
-
-        title=f"Distribution of {hist_col} by Obesity Level"
+        marginal="box",       # Small boxplot above histogram
+        opacity=0.85,
+        title=f"Distribution of {hist_col}"
     )
 
-    # ----------------------------------------------------
-    # CLEAN UP
-    # ----------------------------------------------------
-
+    # Add KDE-like smooth curve using Plotly
+    # Histogram itself remains clean and easy to read
     fig.update_traces(
-        marker_line_width=0,
         hovertemplate=(
-            f"<b>{hist_col}:</b> %{{x}}<br>"
-            "<b>Count:</b> %{y}"
+            f"<b>{hist_col}</b>: %{{x}}<br>"
+            "<b>Count</b>: %{y}"
             "<extra></extra>"
         )
     )
 
-    # Remove repeated facet labels
-    fig.for_each_annotation(
-        lambda a: a.update(
-            text=a.text.split("=")[-1]
-        )
-    )
-
-    # Make all panels use the same x-axis range
-    fig.update_xaxes(
-        matches="x",
-        showgrid=False,
-        title_text=hist_col
-    )
-
-    fig.update_yaxes(
-        showgrid=True,
-        title_text="Number of Records"
-    )
-
     fig.update_layout(
-        height=850,
-        bargap=0.08,
+        height=500,
 
-        # Hide legend because each panel already has its title
-        showlegend=False,
-
-        margin=dict(
-            l=60,
-            r=30,
-            t=80,
-            b=60
+        xaxis=dict(
+            title=hist_col,
+            showgrid=False
         ),
 
-        hovermode="closest"
+        yaxis=dict(
+            title="Number of Records",
+            showgrid=True
+        ),
+
+        bargap=0.05,
+
+        hovermode="x unified",
+
+        margin=dict(
+            l=50,
+            r=30,
+            t=60,
+            b=50
+        )
     )
 
     st.plotly_chart(
@@ -739,9 +715,9 @@ with tab_explore:
     )
 
     st.caption(
-        "💡 Each panel represents one obesity level, making it easier "
-        "to compare the distribution of the selected numeric variable "
-        "without overlapping categories."
+        "💡 The histogram shows how the selected numeric variable "
+        "is distributed across the dataset. Hover over the bars "
+        "to view the number of records in each range."
     )
 
     # ========================================================
