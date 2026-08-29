@@ -909,15 +909,59 @@ with tab_performance:
     macro_metric_tabs = st.tabs(["Precision", "Recall", "F1"])
     for tab, metric in zip(macro_metric_tabs, ["Precision", "Recall", "F1"]):
         with tab:
-            fig, ax = plt.subplots(figsize=(9, 4.5))
-            comparison_df[[f"{metric}_Weighted", f"{metric}_Macro"]].plot(
-                kind="bar", ax=ax, color=["#4C72B0", "#C44E52"]
+            metric_df = (
+                comparison_df[
+                    [f"{metric}_Weighted", f"{metric}_Macro"]
+                ]
+                .reset_index()
+                .rename(columns={"index": "Model"})
             )
-            ax.set_ylim(0, 1.05)
-            ax.set_ylabel(metric)
-            plt.xticks(rotation=20, ha="right")
-            plt.tight_layout()
-            st.pyplot(fig)
+
+            metric_long = metric_df.melt(
+                id_vars="Model",
+                var_name="Average",
+                value_name="Score"
+            )
+            
+            metric_long["Average"] = metric_long["Average"].str.replace(
+                f"{metric}_", "", regex=False
+            )
+            
+            fig = px.bar(
+                metric_long,
+                x="Model",
+                y="Score",
+                color="Average",
+                barmode="group",
+                text="Score",
+                title=f"{metric}: Weighted vs Macro"
+            )
+            
+            fig.update_traces(
+                texttemplate="%{text:.1%}",
+                textposition="outside",
+                hovertemplate=(
+                    "<b>Model:</b> %{x}<br>"
+                    "<b>Average:</b> %{fullData.name}<br>"
+                    f"<b>{metric}:</b> %{{y:.2%}}"
+                    "<extra></extra>"
+                )
+            )
+            
+            fig.update_yaxes(
+                range=[0, 1.05],
+                title=metric,
+                tickformat=".0%"
+            )
+            
+            fig.update_layout(
+                height=450
+            )
+            
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
     st.divider()
     st.subheader("Live Evaluation for a Selected Model")
