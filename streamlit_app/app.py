@@ -512,43 +512,43 @@ with tab_explore:
     
 # OBESITY LEVEL PIE CHART
     with chart1:
-    st.markdown("**Obesity Level Distribution **")
-
-    counts = (
-        filtered["Obesity_Level"]
-        .value_counts()
-        .reindex(obesity_order)
-        .dropna()
-        .reset_index()
-    )
-
-    counts.columns = ["Obesity_Level", "Count"]
-
-    fig = px.pie(
-        counts,
-        names="Obesity_Level",
-        values="Count",
-        title="Obesity Level Distribution"
-    )
-
-    fig.update_traces(
-        textinfo="percent",
-        hovertemplate=(
-            "<b>Obesity Level:</b> %{label}<br>"
-            "<b>Count:</b> %{value}<br>"
-            "<b>Percentage:</b> %{percent}"
-            "<extra></extra>"
+        st.markdown("**Obesity Level Distribution **")
+    
+        counts = (
+            filtered["Obesity_Level"]
+            .value_counts()
+            .reindex(obesity_order)
+            .dropna()
+            .reset_index()
         )
-    )
-
-    fig.update_layout(
-        height=500
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    
+        counts.columns = ["Obesity_Level", "Count"]
+    
+        fig = px.pie(
+            counts,
+            names="Obesity_Level",
+            values="Count",
+            title="Obesity Level Distribution"
+        )
+    
+        fig.update_traces(
+            textinfo="percent",
+            hovertemplate=(
+                "<b>Obesity Level:</b> %{label}<br>"
+                "<b>Count:</b> %{value}<br>"
+                "<b>Percentage:</b> %{percent}"
+                "<extra></extra>"
+            )
+        )
+    
+        fig.update_layout(
+            height=500
+        )
+    
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
 # HISTOGRAM
 
