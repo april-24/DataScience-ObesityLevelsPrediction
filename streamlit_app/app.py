@@ -2060,85 +2060,112 @@ with tab_performance:
         # ----------------------------------------------------
         # CONFUSION MATRIX
         # ----------------------------------------------------
-        with cm_col:
+        # ----------------------------------------------------
+# CONFUSION MATRIX — ORDINAL CLASS ORDER
+# ----------------------------------------------------
+with cm_col:
 
-            st.markdown("### Confusion Matrix")
-        
-            # Desired ordinal order
-            ordinal_order = [
-                "Insufficient Weight",
-                "Normal Weight",
-                "Overweight Level I",
-                "Overweight Level II",
-                "Obesity Type I",
-                "Obesity Type II",
-                "Obesity Type III"
-            ]
-        
-            # Keep only classes that actually exist in the dataset
-            available_classes = [
-                c for c in ordinal_order
-                if c in label_encoder.classes_
-            ]
-        
-            # Convert class names to encoded labels
-            ordinal_indices = [
-                list(label_encoder.classes_).index(c)
-                for c in available_classes
-            ]
-        
-            # Create confusion matrix using ordinal label order
-            cm = confusion_matrix(
-                y_test,
-                y_pred,
-                labels=ordinal_indices
-            )
-        
-            cm_df = pd.DataFrame(
-                cm,
-                index=available_classes,
-                columns=available_classes
-            )
-        
-            fig = px.imshow(
-                cm_df,
-                text_auto=True,
-                aspect="auto",
-                title=f"Confusion Matrix — {eval_model_name}",
-                labels={
-                    "x": "Predicted",
-                    "y": "Actual",
-                    "color": "Count"
-                }
-            )
-        
-            fig.update_traces(
-                hovertemplate=(
-                    "<b>Actual:</b> %{y}<br>"
-                    "<b>Predicted:</b> %{x}<br>"
-                    "<b>Count:</b> %{z}"
-                    "<extra></extra>"
-                )
-            )
-        
-            fig.update_xaxes(
-                categoryorder="array",
-                categoryarray=available_classes
-            )
-        
-            fig.update_yaxes(
-                categoryorder="array",
-                categoryarray=available_classes
-            )
-        
-            fig.update_layout(
-                height=600
-            )
-        
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
+    st.markdown("### Confusion Matrix")
+
+    # ====================================================
+    # DEFINE ORDINAL ORDER
+    # ====================================================
+    ordinal_order = [
+        "Insufficient Weight",
+        "Normal Weight",
+        "Overweight Level I",
+        "Overweight Level II",
+        "Obesity Type I",
+        "Obesity Type II",
+        "Obesity Type III"
+    ]
+
+    # Actual classes used by the encoder
+    actual_classes = list(label_encoder.classes_)
+
+    # ====================================================
+    # MATCH ORDINAL ORDER TO ACTUAL CLASSES
+    # ====================================================
+    ordered_classes = [
+        cls for cls in ordinal_order
+        if cls in actual_classes
+    ]
+
+    # If the names do not match, use encoder order
+    if len(ordered_classes) == 0:
+
+        st.warning(
+            "The predefined ordinal class names do not match the "
+            "class labels in the model. Showing the model's class order instead."
+        )
+
+        ordered_classes = actual_classes
+
+    # ====================================================
+    # CONVERT CLASS NAMES TO ENCODED LABELS
+    # ====================================================
+    ordered_indices = [
+        actual_classes.index(cls)
+        for cls in ordered_classes
+    ]
+
+    # ====================================================
+    # CREATE CONFUSION MATRIX
+    # ====================================================
+    cm = confusion_matrix(
+        y_test,
+        y_pred,
+        labels=ordered_indices
+    )
+
+    cm_df = pd.DataFrame(
+        cm,
+        index=ordered_classes,
+        columns=ordered_classes
+    )
+
+    # ====================================================
+    # PLOT
+    # ====================================================
+    fig = px.imshow(
+        cm_df,
+        text_auto=True,
+        aspect="auto",
+        title=f"Confusion Matrix — {eval_model_name}",
+        labels={
+            "x": "Predicted",
+            "y": "Actual",
+            "color": "Count"
+        }
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            "<b>Actual:</b> %{y}<br>"
+            "<b>Predicted:</b> %{x}<br>"
+            "<b>Count:</b> %{z}"
+            "<extra></extra>"
+        )
+    )
+
+    fig.update_xaxes(
+        categoryorder="array",
+        categoryarray=ordered_classes
+    )
+
+    fig.update_yaxes(
+        categoryorder="array",
+        categoryarray=ordered_classes
+    )
+
+    fig.update_layout(
+        height=600
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
         # ----------------------------------------------------
         # ROC CURVES
         # ----------------------------------------------------
