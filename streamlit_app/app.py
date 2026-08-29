@@ -771,9 +771,9 @@ with tab_predict:
         	"Obesity_Level": 
         		pred_label 
         	} 
-        	st.session_state.prediction_history.append( 
-                history_record 
-            )
+        st.session_state.prediction_history.append( 
+            history_record 
+        )
 
         # ----------------------------------------------------
         # BMI
