@@ -152,6 +152,16 @@ metadata = load_metadata()
 obesity_order = metadata["obesity_order"]
 best_model_name = metadata.get("best_model", "Random Forest")
 
+OBESITY_COLORS = {
+    "Insufficient_Weight": "#3498DB",
+    "Normal_Weight": "#2ECC71",
+    "Overweight_Level_I": "#F1C40F",
+    "Overweight_Level_II": "#E67E22",
+    "Obesity_Type_I": "#E74C3C",
+    "Obesity_Type_II": "#9B59B6",
+    "Obesity_Type_III": "#8E44AD",
+}
+
 
 # ============================================================
 # HEADER
