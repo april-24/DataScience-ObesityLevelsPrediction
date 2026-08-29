@@ -85,11 +85,11 @@
   "target_classes": [
     "Insufficient_Weight",
     "Normal_Weight",
+    "Overweight_Level_I",
+    "Overweight_Level_II",
     "Obesity_Type_I",
     "Obesity_Type_II",
-    "Obesity_Type_III",
-    "Overweight_Level_I",
-    "Overweight_Level_II"
+    "Obesity_Type_III"
   ],
   "obesity_order": [
     "Insufficient_Weight",
