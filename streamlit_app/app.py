@@ -1133,12 +1133,14 @@ with tab_explore:
                         "Obesity_Level":
                             obesity_order
                     },
-                    hole=0.40
+                    hole=0.32
                 )
 
                 fig.update_traces(
                     textinfo="percent",
                     textposition="inside",
+
+                    domain=dict( x=[0, 1], y=[0.15, 1] ),
 
                     hovertemplate=(
                         "<b>Obesity Level:</b> %{label}<br>"
@@ -1153,22 +1155,26 @@ with tab_explore:
                     height=450,
 
                     margin=dict(
-                        l=10,
-                        r=10,
-                        t=10,
-                        b=10
+                        l=5,
+                        r=5,
+                        t=5,
+                        b=5
                     ),
 
                     legend=dict(
                         title="Obesity Level",
                         traceorder="normal",
                         orientation="h",
-                        yanchor="top",
-                        y=-0.05,
+                        yanchor="bottom",
+                        y=-0,
                         xanchor="center",
                         x=0.5
+
+                        font=dict(
+                            size=10
                     )
                 )
+            )
 
                 st.plotly_chart(
                     fig,
