@@ -638,32 +638,6 @@ with tab_explore:
 # ========================================================
 # 2. CLEAR HISTOGRAM
 # ========================================================
-
-with chart2:
-
-    st.markdown("### 📊 Numeric Distribution")
-
-    hist_col = st.selectbox(
-        "Choose a numeric variable",
-        num_options,
-        index=(
-            num_options.index("BMI")
-            if "BMI" in num_options
-            else 0
-        ),
-        key="hist_col"
-    )
-
-    # Number of bins
-    hist_bins = st.slider(
-        "Number of bins",
-        min_value=5,
-        max_value=40,
-        value=15,
-        step=5,
-        key="hist_bins"
-    )
-
     with chart2:
 
     st.markdown("### 📊 Numeric Distribution")
