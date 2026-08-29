@@ -1098,13 +1098,11 @@ with tab_explore:
         # ====================================================
 
         with chart1:
-
+        
             with st.container(border=True):
-
-                st.markdown(
-                    "### 🍩 Obesity Level Distribution"
-                )
-
+        
+                st.markdown("### 🍩 Obesity Level Distribution")
+        
                 counts = (
                     filtered["Obesity_Level"]
                     .value_counts()
@@ -1112,17 +1110,16 @@ with tab_explore:
                     .fillna(0)
                     .reset_index()
                 )
-
+        
                 counts.columns = [
                     "Obesity_Level",
                     "Count"
                 ]
-
+        
                 # Remove zero-count categories
-                counts = counts[
-                    counts["Count"] > 0
-                ]
-
+                counts = counts[counts["Count"] > 0]
+        
+                # Create pie chart
                 fig = px.pie(
                     counts,
                     names="Obesity_Level",
@@ -1130,58 +1127,64 @@ with tab_explore:
                     color="Obesity_Level",
                     color_discrete_map=OBESITY_COLORS,
                     category_orders={
-                        "Obesity_Level":
-                            obesity_order
+                        "Obesity_Level": obesity_order
                     },
                     hole=0.32
                 )
-
+        
+                # Pie formatting
                 fig.update_traces(
                     textinfo="percent",
                     textposition="inside",
-                
-                    # Use the full chart area
-                    domain=dict(
-                        x=[0, 1],
-                        y=[0.10, 1]
-                    ),
-                
+        
                     hovertemplate=(
                         "<b>Obesity Level:</b> %{label}<br>"
                         "<b>Count:</b> %{value}<br>"
                         "<b>Percentage:</b> %{percent}"
                         "<extra></extra>"
+                    ),
+        
+                    # Make pie larger
+                    domain=dict(
+                        x=[0.05, 0.95],
+                        y=[0.12, 1.0]
                     )
                 )
-                
+        
+                # Layout
                 fig.update_layout(
                     height=450,
-                    margin=dict(l=5, r=5, t=5, b=5),
-                
+        
+                    margin=dict(
+                        l=0,
+                        r=0,
+                        t=0,
+                        b=0
+                    ),
+        
+                    # Legend at bottom
                     legend=dict(
                         title="Obesity Level",
                         orientation="h",
-                        yanchor="bottom",
-                        y=0,
-                        xanchor="center",
+        
                         x=0.5,
-                        font=dict(size=10)
+                        xanchor="center",
+        
+                        y=0,
+                        yanchor="bottom",
+        
+                        font=dict(
+                            size=10
+                        )
                     )
                 )
-                
-                fig.update_traces(
-                    textinfo="percent",
-                    textposition="inside",
-                    domain=dict(
-                        x=[0.05, 0.95],
-                        y=[0.15, 0.98]
-                    ),
-                    hovertemplate=(
-                        "<b>Obesity Level:</b> %{label}<br>"
-                        "<b>Count:</b> %{value}<br>"
-                        "<b>Percentage:</b> %{percent}"
-                        "<extra></extra>"
-                    )
+        
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True,
+                    config={
+                        "displayModeBar": False
+                    }
                 )
         # ====================================================
         # 2. HISTOGRAM
