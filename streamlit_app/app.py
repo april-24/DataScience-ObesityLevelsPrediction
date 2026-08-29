@@ -1139,9 +1139,13 @@ with tab_explore:
                 fig.update_traces(
                     textinfo="percent",
                     textposition="inside",
-
-                    domain=dict( x=[0, 1], y=[0.15, 1] ),
-
+                
+                    # Use the full chart area
+                    domain=dict(
+                        x=[0, 1],
+                        y=[0.10, 1]
+                    ),
+                
                     hovertemplate=(
                         "<b>Obesity Level:</b> %{label}<br>"
                         "<b>Count:</b> %{value}<br>"
@@ -1149,39 +1153,33 @@ with tab_explore:
                         "<extra></extra>"
                     )
                 )
-
+                
                 fig.update_layout(
-
                     height=450,
-
+                
                     margin=dict(
                         l=5,
                         r=5,
                         t=5,
                         b=5
                     ),
-
+                
                     legend=dict(
                         title="Obesity Level",
                         traceorder="normal",
                         orientation="h",
-                        yanchor="bottom",
-                        y=-0,
+                
+                        # Put legend closer to pie
+                        yanchor="top",
+                        y=0.02,
+                
                         xanchor="center",
                         x=0.5,
-
+                
                         font=dict(
                             size=10
+                        )
                     )
-                )
-            )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True,
-                    config={
-                        "displayModeBar": False
-                    }
                 )
 
         # ====================================================
