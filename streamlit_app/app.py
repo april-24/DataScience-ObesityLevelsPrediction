@@ -1079,102 +1079,95 @@ with tab_performance:
         )
 
         with roc_col:
-        st.markdown("**Per-class ROC Curves**")
+            st.markdown("**Per-class ROC Curves**")
 
-        if hasattr(eval_pipeline, "predict_proba"):
-
-            y_proba = eval_pipeline.predict_proba(X_test)
-
-            y_test_bin = label_binarize(
-                y_test,
-                classes=list(range(len(label_encoder.classes_)))
-            )
-
-            roc_rows = []
-
-            for i, class_name in enumerate(label_encoder.classes_):
-
-                fpr, tpr, _ = roc_curve(
-                    y_test_bin[:, i],
-                    y_proba[:, i]
+            if hasattr(eval_pipeline, "predict_proba"):
+                y_proba = eval_pipeline.predict_proba(X_test)
+                y_test_bin = label_binarize(
+                    y_test,
+                    classes=list(range(len(label_encoder.classes_)))
                 )
 
-                roc_auc_i = auc(fpr, tpr)
-
-                for x, y in zip(fpr, tpr):
-                    roc_rows.append({
-                        "False Positive Rate": x,
-                        "True Positive Rate": y,
-                        "Obesity Level": class_name,
-                        "AUC": roc_auc_i
-                    })
-
-            roc_df = pd.DataFrame(roc_rows)
-
-            fig = px.line(
-                roc_df,
-                x="False Positive Rate",
-                y="True Positive Rate",
-                color="Obesity Level",
-                title=f"Per-class ROC Curves — {eval_model_name}",
-                hover_data=["AUC"]
+                roc_rows = []
+    
+                for i, class_name in enumerate(label_encoder.classes_):
+    
+                    fpr, tpr, _ = roc_curve(
+                        y_test_bin[:, i],
+                        y_proba[:, i]
+                    )
+    
+                    roc_auc_i = auc(fpr, tpr)
+    
+                    for x, y in zip(fpr, tpr):
+                        roc_rows.append({
+                            "False Positive Rate": x,
+                            "True Positive Rate": y,
+                            "Obesity Level": class_name,
+                            "AUC": roc_auc_i
+                        })
+    
+                roc_df = pd.DataFrame(roc_rows)
+    
+                fig = px.line(
+                    roc_df,
+                    x="False Positive Rate",
+                    y="True Positive Rate",
+                    color="Obesity Level",
+                    title=f"Per-class ROC Curves — {eval_model_name}",
+                    hover_data=["AUC"]
+                )
+    
+                # Random classifier reference line
+                fig.add_scatter(
+                    x=[0, 1],
+                    y=[0, 1],
+                    mode="lines",
+                    name="Random Classifier",
+                    line=dict(dash="dot")
+                )
+    
+                fig.update_xaxes(
+                    range=[0, 1],
+                    title="False Positive Rate"
+                )
+    
+                fig.update_yaxes(
+                    range=[0, 1],
+                    title="True Positive Rate"
+                )
+    
+                fig.update_layout(
+                    height=550,
+                    hovermode="closest"
+                )
+    
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+    
+            else:
+                st.info(
+                    "This model does not expose class probabilities for ROC curves."
+                )
+    
+        with st.expander("Full classification report"):
+    
+            report = classification_report(
+                y_test,
+                y_pred,
+                target_names=label_encoder.classes_,
+                zero_division=0,
+                output_dict=True,
+            )
+    
+            st.dataframe(
+                pd.DataFrame(report).T.round(3),
+                width="stretch"
             )
 
-            # Random classifier reference line
-            fig.add_scatter(
-                x=[0, 1],
-                y=[0, 1],
-                mode="lines",
-                name="Random Classifier",
-                line=dict(dash="dot")
-            )
-
-            fig.update_xaxes(
-                range=[0, 1],
-                title="False Positive Rate"
-            )
-
-            fig.update_yaxes(
-                range=[0, 1],
-                title="True Positive Rate"
-            )
-
-            fig.update_layout(
-                height=550,
-                hovermode="closest"
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-        else:
-            st.info(
-                "This model does not expose class probabilities for ROC curves."
-            )
-
-
-    with st.expander("Full classification report"):
-
-        report = classification_report(
-            y_test,
-            y_pred,
-            target_names=label_encoder.classes_,
-            zero_division=0,
-            output_dict=True,
-        )
-
-        st.dataframe(
-            pd.DataFrame(report).T.round(3),
-            width="stretch"
-        )
-
-
-    # ========================================================
     # RANDOM FOREST — FEATURE IMPORTANCE
-    # ========================================================
-
     if eval_model_name == "Random Forest":
 
         st.subheader("Random Forest — Feature Importance")
