@@ -1,16 +1,17 @@
+
 """
 BMDS2003 Data Science — Obesity Level Prediction App
-======================================================
+=====================================================
 A Streamlit deployment prototype for the group project
-"Estimation of Obesity Levels Based on Eating Habits and Physical Condition".
 
-Run locally with:
+"Estimation of Obesity Levels Based on Eating Habits and Physical Condition"
+
+Run locally:
     streamlit run app.py
 """
 
 import json
 from pathlib import Path
-from datetime import datetime
 
 import joblib
 import numpy as np
@@ -46,10 +47,6 @@ st.set_page_config(
 MODELS_DIR = Path(__file__).parent / "models"
 
 
-# ============================================================
-# MODEL FILES
-# ============================================================
-
 MODEL_FILES = {
     "Decision Tree (Baseline)": "decision_tree_pipeline.pkl",
     "Random Forest": "random_forest_pipeline.pkl",
@@ -78,29 +75,29 @@ RECOMMENDATIONS = {
     "Overweight_Level_I": (
         "Your inputs suggest early-stage overweight. Small, sustainable changes "
         "such as eating more vegetables, reducing high-calorie snacks, and "
-        "increasing physical activity can help reduce the risk of progressing further."
+        "increasing physical activity may be beneficial."
     ),
 
     "Overweight_Level_II": (
         "Your inputs suggest overweight. A structured plan combining dietary "
-        "adjustments, increased physical activity, and reduced sedentary technology "
-        "time is recommended, ideally with professional guidance."
+        "adjustments, increased physical activity, and reduced sedentary time "
+        "may be beneficial."
     ),
 
     "Obesity_Type_I": (
-        "Your inputs suggest Class I obesity. We recommend consulting a healthcare "
-        "provider or dietitian to design a supervised weight-management plan, "
-        "alongside gradual increases in physical activity."
+        "Your inputs suggest Class I obesity. Consider consulting a healthcare "
+        "provider or dietitian for a supervised weight-management plan."
     ),
 
     "Obesity_Type_II": (
-        "Your inputs suggest Class II obesity. Professional medical guidance is "
-        "strongly recommended to design a safe, supervised intervention plan."
+        "Your inputs suggest Class II obesity. Professional medical guidance "
+        "is strongly recommended for a safe and supervised intervention plan."
     ),
 
     "Obesity_Type_III": (
         "Your inputs suggest Class III obesity. Please consult a healthcare "
-        "professional to discuss a comprehensive, medically supervised management plan."
+        "professional to discuss a comprehensive and medically supervised "
+        "management plan."
     ),
 }
 
@@ -110,6 +107,7 @@ RECOMMENDATIONS = {
 # ============================================================
 
 OBESITY_COLORS = {
+
     "Insufficient_Weight": "#3498DB",
     "Normal_Weight": "#2ECC71",
     "Overweight_Level_I": "#F1C40F",
@@ -117,21 +115,23 @@ OBESITY_COLORS = {
     "Obesity_Type_I": "#E74C3C",
     "Obesity_Type_II": "#9B59B6",
     "Obesity_Type_III": "#8E44AD",
-}
 
-ORDINAL_ORDER = [
-    "Insufficient_Weight",
-    "Normal_Weight",
-    "Overweight_Level_I",
-    "Overweight_Level_II",
-    "Obesity_Type_I",
-    "Obesity_Type_II",
-    "Obesity_Type_III",
-]
+}
 
 
 # ============================================================
-# CACHED LOADERS
+# SESSION STATE
+# ============================================================
+
+if "prediction_history" not in st.session_state:
+    st.session_state.prediction_history = []
+
+if "prediction_reset_counter" not in st.session_state:
+    st.session_state.prediction_reset_counter = 0
+
+
+# ============================================================
+# LOAD MODELS
 # ============================================================
 
 @st.cache_resource(show_spinner="Loading trained models...")
@@ -139,56 +139,122 @@ def load_models():
 
     models = {}
 
+    model_errors = {}
+
     for name, filename in MODEL_FILES.items():
 
         path = MODELS_DIR / filename
 
-        if path.exists():
+        if not path.exists():
+
+            model_errors[name] = (
+                f"File not found: {path}"
+            )
+
+            continue
+
+        try:
+
             models[name] = joblib.load(path)
 
-    label_encoder = joblib.load(
-        MODELS_DIR / "label_encoder.pkl"
-    )
+        except Exception as e:
 
-    return models, label_encoder
+            model_errors[name] = str(e)
 
+    # Label encoder
+    label_encoder_path = MODELS_DIR / "label_encoder.pkl"
+
+    if not label_encoder_path.exists():
+
+        raise FileNotFoundError(
+            f"Missing label encoder: {label_encoder_path}"
+        )
+
+    try:
+
+        label_encoder = joblib.load(
+            label_encoder_path
+        )
+
+    except Exception as e:
+
+        raise RuntimeError(
+            "Unable to load label_encoder.pkl. "
+            "This usually indicates an incompatible "
+            "Python/scikit-learn/joblib environment.\n\n"
+            f"Original error: {e}"
+        )
+
+    return models, label_encoder, model_errors
+
+
+# ============================================================
+# LOAD METADATA
+# ============================================================
 
 @st.cache_resource(show_spinner=False)
 def load_metadata():
 
-    with open(
-        MODELS_DIR / "feature_metadata.json",
-        encoding="utf-8"
-    ) as f:
+    path = MODELS_DIR / "feature_metadata.json"
+
+    if not path.exists():
+
+        raise FileNotFoundError(
+            f"Missing metadata file: {path}"
+        )
+
+    with open(path, "r") as f:
 
         return json.load(f)
 
 
+# ============================================================
+# LOAD DATA
+# ============================================================
+
 @st.cache_data(show_spinner="Loading dataset...")
 def load_cleaned_data():
 
-    return pd.read_csv(
-        MODELS_DIR / "obesity_cleaned.csv"
-    )
+    path = MODELS_DIR / "obesity_cleaned.csv"
 
+    if not path.exists():
+
+        raise FileNotFoundError(
+            f"Missing dataset: {path}"
+        )
+
+    return pd.read_csv(path)
+
+
+# ============================================================
+# LOAD MODEL COMPARISON
+# ============================================================
 
 @st.cache_data(show_spinner=False)
 def load_comparison_table():
 
+    path = MODELS_DIR / "model_comparison.csv"
+
+    if not path.exists():
+
+        raise FileNotFoundError(
+            f"Missing comparison file: {path}"
+        )
+
     return pd.read_csv(
-        MODELS_DIR / "model_comparison.csv",
+        path,
         index_col=0
     )
 
 
+# ============================================================
+# REBUILD TEST SPLIT
+# ============================================================
+
 @st.cache_data(
-    show_spinner="Rebuilding the held-out test split for evaluation..."
+    show_spinner="Rebuilding the held-out test split..."
 )
 def rebuild_test_split(_metadata):
-
-    """
-    Recreate the exact same train/test split used in the notebook.
-    """
 
     df = load_cleaned_data()
 
@@ -228,6 +294,7 @@ def rebuild_test_split(_metadata):
         random_state=42,
 
         stratify=y_encoded
+
     )
 
     return (
@@ -242,33 +309,70 @@ def rebuild_test_split(_metadata):
 # LOAD EVERYTHING
 # ============================================================
 
-models, label_encoder = load_models()
+try:
 
-metadata = load_metadata()
+    models, label_encoder, model_errors = load_models()
+
+    metadata = load_metadata()
+
+except Exception as e:
+
+    st.error(
+        "❌ The application could not load the saved models."
+    )
+
+    st.code(
+        str(e)
+    )
+
+    st.warning(
+        """
+This is usually caused by the model files being created with a
+different Python/scikit-learn/joblib version from the one used by
+Streamlit Cloud.
+
+Make sure the environment used to train the models matches the
+environment used to deploy them.
+"""
+    )
+
+    st.stop()
 
 
 # ============================================================
-# SESSION STATE — PREDICTION HISTORY
+# MODEL ERROR WARNING
 # ============================================================
 
-if "prediction_history" not in st.session_state:
+if model_errors:
 
-    st.session_state.prediction_history = []
+    st.warning(
+        "Some models could not be loaded."
+    )
 
+    for model_name, error in model_errors.items():
 
-if "prediction_reset_counter" not in st.session_state:
-
-    st.session_state.prediction_reset_counter = 0
+        st.error(
+            f"**{model_name}**\n\n{error}"
+        )
 
 
 # ============================================================
-# GENERAL SETTINGS
+# METADATA
 # ============================================================
 
 obesity_order = metadata.get(
     "obesity_order",
-    ORDINAL_ORDER
+    [
+        "Insufficient_Weight",
+        "Normal_Weight",
+        "Overweight_Level_I",
+        "Overweight_Level_II",
+        "Obesity_Type_I",
+        "Obesity_Type_II",
+        "Obesity_Type_III"
+    ]
 )
+
 
 best_model_name = metadata.get(
     "best_model",
@@ -296,6 +400,7 @@ st.caption(
 # ============================================================
 
 tab_about, tab_predict, tab_explore, tab_history, tab_performance = st.tabs(
+
     [
         "🏠 About",
         "🔮 Prediction",
@@ -303,6 +408,7 @@ tab_about, tab_predict, tab_explore, tab_history, tab_performance = st.tabs(
         "🕒 History",
         "📈 Model Performance"
     ]
+
 )
 
 
@@ -320,10 +426,9 @@ with tab_about:
         [2, 1]
     )
 
-
-    # ========================================================
-    # LEFT COLUMN
-    # ========================================================
+    # --------------------------------------------------------
+    # LEFT
+    # --------------------------------------------------------
 
     with col1:
 
@@ -336,25 +441,21 @@ with tab_about:
 Obesity is a growing public-health concern linked to diabetes,
 cardiovascular disease, and reduced quality of life.
 
-This project explores whether **everyday lifestyle and eating habits**
-can predict a person's obesity category.
+This project explores whether **everyday lifestyle and eating
+habits can be used to predict a person's obesity category**.
 
 The system can support:
 
-- **Self-assessment tools** that flag potential obesity risk.
-- **Public-health screening** at scale.
-- **Targeted lifestyle recommendations** based on eating habits,
-  activity, and physical-condition variables.
+- **Self-assessment**
+- **Public-health screening**
+- **Lifestyle analysis**
+- **Data-driven obesity classification**
 
-**Objective:** classify an individual into one of seven obesity levels
-using lifestyle, dietary, and physical-condition attributes.
+**Objective:** classify an individual into one of seven
+obesity levels using lifestyle, dietary, and physical-condition
+attributes.
 """
         )
-
-
-        # ====================================================
-        # DATASET
-        # ====================================================
 
         st.subheader(
             "Dataset"
@@ -362,20 +463,13 @@ using lifestyle, dietary, and physical-condition attributes.
 
         st.markdown(
             """
-- **Source:** UCI Machine Learning Repository — *Estimation of Obesity
-  Levels Based on Eating Habits and Physical Condition*.
-- **Records:** 2,111 respondents.
-- **Variables:** 16 predictive features plus the target.
+- **Source:** UCI Machine Learning Repository
+- **Records:** 2,111 respondents
+- **Features:** 16 predictive features
 - **Target:** `Obesity_Level`
-- **Classes:** 7 obesity categories ranging from
-  `Insufficient_Weight` to `Obesity_Type_III`.
+- **Classes:** 7 obesity categories
 """
         )
-
-
-        # ====================================================
-        # CRISP-DM
-        # ====================================================
 
         st.subheader(
             "CRISP-DM Workflow"
@@ -383,23 +477,18 @@ using lifestyle, dietary, and physical-condition attributes.
 
         st.markdown(
             """
-1. **Business Understanding** — define the prediction problem.
-2. **Data Understanding** — inspect the dataset structure,
-   distributions, and relationships.
-3. **Data Preparation** — clean the data, handle outliers,
-   engineer BMI for analysis, and prepare model features.
-4. **Modelling** — train four classifiers:
-   Decision Tree, Random Forest, SVM, and KNN.
-5. **Evaluation** — compare accuracy, precision, recall, F1,
-   AUC, confusion matrices, ROC curves, and overfitting.
-6. **Deployment** — provide this interactive Streamlit application.
+1. **Business Understanding**
+2. **Data Understanding**
+3. **Data Preparation**
+4. **Modelling**
+5. **Evaluation**
+6. **Deployment**
 """
         )
 
-
-    # ========================================================
-    # RIGHT COLUMN
-    # ========================================================
+    # --------------------------------------------------------
+    # RIGHT
+    # --------------------------------------------------------
 
     with col2:
 
@@ -409,44 +498,41 @@ using lifestyle, dietary, and physical-condition attributes.
 
         st.markdown(
             """
-| Member | Model Owned |
+| Member | Model |
 |---|---|
-| Kyra | Decision Tree (Baseline) |
+| Kyra | Decision Tree |
 | Liping | Random Forest |
-| Wenhsuan | Support Vector Machine |
-| Gladys | K-Nearest Neighbours |
+| Wenhsuan | SVM |
+| Gladys | KNN |
 """
         )
-
-
-        # ====================================================
-        # BEST MODEL
-        # ====================================================
 
         st.subheader(
             "Best Model"
         )
 
         st.success(
-            f"**{best_model_name}** achieved the highest test-set accuracy."
+            f"**{best_model_name}**"
         )
 
-        comparison_preview = load_comparison_table()
+        try:
 
-        if best_model_name in comparison_preview.index:
-
-            st.metric(
-                "Best Test Accuracy",
-                f"{comparison_preview.loc[best_model_name, 'Test_Accuracy']:.1%}"
+            comparison_preview = (
+                load_comparison_table()
             )
 
+            if best_model_name in comparison_preview.index:
 
-        st.info(
-            "Use the **Prediction** tab to generate a prediction, "
-            "the **Data Exploration** tab to explore the dataset, "
-            "the **History** tab to review previous predictions, "
-            "and the **Model Performance** tab to inspect model evaluation."
-        )
+                st.metric(
+                    "Best Test Accuracy",
+                    f"{comparison_preview.loc[best_model_name, 'Test_Accuracy']:.1%}"
+                )
+
+        except Exception:
+
+            st.info(
+                "Comparison table unavailable."
+            )
 
 
 # ============================================================
@@ -461,21 +547,20 @@ with tab_predict:
 
     st.caption(
         "Fill in the fields below and choose a model to generate "
-        "a live prediction using the saved preprocessing and classifier pipeline."
+        "a live prediction."
     )
 
+    num_meta = metadata[
+        "numeric_features"
+    ]
+
+    cat_meta = metadata[
+        "categorical_features"
+    ]
+
 
     # ========================================================
-    # METADATA
-    # ========================================================
-
-    num_meta = metadata["numeric_features"]
-
-    cat_meta = metadata["categorical_features"]
-
-
-    # ========================================================
-    # FREQUENCY OPTIONS
+    # FREQUENCY
     # ========================================================
 
     FREQUENCY_ORDER = [
@@ -488,7 +573,11 @@ with tab_predict:
 
     def freq_label(x):
 
-        return "Never" if x == "no" else x
+        return (
+            "Never"
+            if x == "no"
+            else x
+        )
 
 
     def yes_no_label(x):
@@ -510,10 +599,11 @@ with tab_predict:
         if m in models
     ]
 
+
     if not available_models:
 
         st.error(
-            "No trained models were found in the models folder."
+            "No trained models are available."
         )
 
         st.stop()
@@ -528,12 +618,9 @@ with tab_predict:
         if best_model_name in available_models
 
         else 0
+
     )
 
-
-    # ========================================================
-    # RESET COUNTER
-    # ========================================================
 
     reset_counter = (
         st.session_state.prediction_reset_counter
@@ -561,6 +648,7 @@ with tab_predict:
         label_visibility="collapsed",
 
         key=f"prediction_model_{reset_counter}"
+
     )
 
 
@@ -583,17 +671,16 @@ with tab_predict:
 
 
     # ========================================================
-    # PREDICTION FORM
+    # FORM
     # ========================================================
 
     with st.form(
         f"prediction_form_{reset_counter}"
     ):
 
-
-        # ====================================================
-        # PERSONAL & PHYSICAL ATTRIBUTES
-        # ====================================================
+        # ----------------------------------------------------
+        # PERSONAL
+        # ----------------------------------------------------
 
         st.subheader(
             "Personal & Physical Attributes"
@@ -604,10 +691,6 @@ with tab_predict:
 
         with c1:
 
-            st.markdown(
-                "**Gender**"
-            )
-
             gender = st.radio(
 
                 "Gender",
@@ -616,14 +699,13 @@ with tab_predict:
 
                 horizontal=True,
 
-                label_visibility="collapsed",
-
                 format_func=lambda x:
                     "👩 Female"
                     if x == "Female"
                     else "👨 Male",
 
                 key=f"gender_{reset_counter}"
+
             )
 
 
@@ -645,6 +727,7 @@ with tab_predict:
                 step=1.0,
 
                 key=f"age_{reset_counter}"
+
             )
 
 
@@ -672,6 +755,7 @@ with tab_predict:
                 format="%.2f",
 
                 key=f"height_{reset_counter}"
+
             )
 
 
@@ -687,7 +771,7 @@ with tab_predict:
 
                 max_value=float(
                     num_meta["Weight"]["max"]
-                ) + 50.0,
+                ) + 50,
 
                 value=round(
                     num_meta["Weight"]["mean"],
@@ -697,12 +781,13 @@ with tab_predict:
                 step=1.0,
 
                 key=f"weight_{reset_counter}"
+
             )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # EATING HABITS
-        # ====================================================
+        # ----------------------------------------------------
 
         st.subheader(
             "Eating Habits"
@@ -712,10 +797,6 @@ with tab_predict:
 
 
         with c4:
-
-            st.markdown(
-                "**Family history of overweight?**"
-            )
 
             family_history = st.radio(
 
@@ -727,17 +808,12 @@ with tab_predict:
 
                 horizontal=True,
 
-                label_visibility="collapsed",
-
                 format_func=yes_no_label,
 
                 key=f"family_history_{reset_counter}"
+
             )
 
-
-            st.markdown(
-                "**Frequently eats high-caloric food?**"
-            )
 
             favc = st.radio(
 
@@ -749,11 +825,10 @@ with tab_predict:
 
                 horizontal=True,
 
-                label_visibility="collapsed",
-
                 format_func=yes_no_label,
 
                 key=f"favc_{reset_counter}"
+
             )
 
 
@@ -761,12 +836,11 @@ with tab_predict:
 
             fcvc = st.slider(
 
-                "Vegetable consumption frequency "
-                "(1 = never, 3 = always)",
+                "Vegetable consumption frequency",
 
-                min_value=1.0,
+                1.0,
 
-                max_value=3.0,
+                3.0,
 
                 value=round(
                     num_meta[
@@ -778,6 +852,7 @@ with tab_predict:
                 step=0.1,
 
                 key=f"fcvc_{reset_counter}"
+
             )
 
 
@@ -785,9 +860,9 @@ with tab_predict:
 
                 "Number of main meals per day",
 
-                min_value=1.0,
+                1.0,
 
-                max_value=4.0,
+                4.0,
 
                 value=round(
                     num_meta[
@@ -799,14 +874,11 @@ with tab_predict:
                 step=0.5,
 
                 key=f"ncp_{reset_counter}"
+
             )
 
 
         with c6:
-
-            st.markdown(
-                "**Eats food between meals?**"
-            )
 
             caec = st.select_slider(
 
@@ -816,17 +888,12 @@ with tab_predict:
 
                 value="Sometimes",
 
-                label_visibility="collapsed",
-
                 format_func=freq_label,
 
                 key=f"caec_{reset_counter}"
+
             )
 
-
-            st.markdown(
-                "**Alcohol consumption**"
-            )
 
             calc = st.select_slider(
 
@@ -836,17 +903,16 @@ with tab_predict:
 
                 value="Sometimes",
 
-                label_visibility="collapsed",
-
                 format_func=freq_label,
 
                 key=f"calc_{reset_counter}"
+
             )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # LIFESTYLE
-        # ====================================================
+        # ----------------------------------------------------
 
         st.subheader(
             "Lifestyle & Physical Condition"
@@ -857,10 +923,6 @@ with tab_predict:
 
         with c7:
 
-            st.markdown(
-                "**Smokes?**"
-            )
-
             smoke = st.radio(
 
                 "Smokes?",
@@ -869,17 +931,12 @@ with tab_predict:
 
                 horizontal=True,
 
-                label_visibility="collapsed",
-
                 format_func=yes_no_label,
 
                 key=f"smoke_{reset_counter}"
+
             )
 
-
-            st.markdown(
-                "**Monitors calorie intake?**"
-            )
 
             scc = st.radio(
 
@@ -889,11 +946,10 @@ with tab_predict:
 
                 horizontal=True,
 
-                label_visibility="collapsed",
-
                 format_func=yes_no_label,
 
                 key=f"scc_{reset_counter}"
+
             )
 
 
@@ -901,12 +957,11 @@ with tab_predict:
 
             ch2o = st.slider(
 
-                "Daily water intake "
-                "(1 = <1L, 3 = >2L)",
+                "Daily water intake",
 
-                min_value=1.0,
+                1.0,
 
-                max_value=3.0,
+                3.0,
 
                 value=round(
                     num_meta[
@@ -918,17 +973,17 @@ with tab_predict:
                 step=0.1,
 
                 key=f"ch2o_{reset_counter}"
+
             )
 
 
             faf = st.slider(
 
-                "Physical activity frequency "
-                "(0 = none, 3 = frequent)",
+                "Physical activity frequency",
 
-                min_value=0.0,
+                0.0,
 
-                max_value=3.0,
+                3.0,
 
                 value=round(
                     num_meta[
@@ -940,6 +995,7 @@ with tab_predict:
                 step=0.1,
 
                 key=f"faf_{reset_counter}"
+
             )
 
 
@@ -947,12 +1003,11 @@ with tab_predict:
 
             tue = st.slider(
 
-                "Technology usage time "
-                "(0 = low, 2 = high)",
+                "Technology usage time",
 
-                min_value=0.0,
+                0.0,
 
-                max_value=2.0,
+                2.0,
 
                 value=round(
                     num_meta[
@@ -964,12 +1019,9 @@ with tab_predict:
                 step=0.1,
 
                 key=f"tue_{reset_counter}"
+
             )
 
-
-            st.markdown(
-                "**Usual transportation mode**"
-            )
 
             mtrans = st.pills(
 
@@ -983,12 +1035,11 @@ with tab_predict:
                     "Transportation_Mode"
                 ][0],
 
-                label_visibility="collapsed",
-
                 format_func=lambda x:
                     x.replace("_", " "),
 
                 key=f"mtrans_{reset_counter}"
+
             )
 
 
@@ -999,9 +1050,9 @@ with tab_predict:
                 ][0]
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # BUTTONS
-        # ====================================================
+        # ----------------------------------------------------
 
         st.markdown("")
 
@@ -1017,6 +1068,7 @@ with tab_predict:
                 type="primary",
 
                 use_container_width=True
+
             )
 
 
@@ -1029,6 +1081,7 @@ with tab_predict:
                 type="secondary",
 
                 use_container_width=True
+
             )
 
 
@@ -1048,10 +1101,6 @@ with tab_predict:
     # ========================================================
 
     if submitted:
-
-        # ====================================================
-        # INPUT DATA
-        # ====================================================
 
         input_row = pd.DataFrame([{
 
@@ -1102,10 +1151,6 @@ with tab_predict:
         }])
 
 
-        # ====================================================
-        # MODEL
-        # ====================================================
-
         pipeline = models[
             chosen_model_name
         ]
@@ -1117,7 +1162,6 @@ with tab_predict:
                 input_row
             )[0]
 
-
             pred_label = (
                 label_encoder
                 .inverse_transform(
@@ -1128,7 +1172,7 @@ with tab_predict:
         except Exception as e:
 
             st.error(
-                "Unable to generate the prediction."
+                "Prediction failed."
             )
 
             st.code(
@@ -1143,47 +1187,31 @@ with tab_predict:
         # ====================================================
 
         bmi_value = (
-            weight / (height ** 2)
+            weight /
+            (height ** 2)
         )
 
 
         # ====================================================
-        # SAVE TO HISTORY
+        # SAVE HISTORY
         # ====================================================
 
         history_record = {
 
-            "Date & Time":
-                datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
-
             "Model":
                 chosen_model_name,
-
-            "Predicted Obesity Level":
-                pred_label.replace(
-                    "_",
-                    " "
-                ),
-
-            "Gender":
-                gender,
 
             "Age":
                 age,
 
-            "Height (m)":
-                round(
-                    height,
-                    2
-                ),
+            "Gender":
+                gender,
 
-            "Weight (kg)":
-                round(
-                    weight,
-                    1
-                ),
+            "Height":
+                height,
+
+            "Weight":
+                weight,
 
             "BMI":
                 round(
@@ -1191,47 +1219,16 @@ with tab_predict:
                     2
                 ),
 
-            "Family History":
-                family_history,
-
-            "High-Calorie Food":
-                favc,
-
-            "Vegetable Frequency":
-                fcvc,
-
-            "Main Meals":
-                ncp,
-
-            "Food Between Meals":
-                caec,
-
-            "Smokes":
-                smoke,
-
-            "Water Intake":
-                ch2o,
-
-            "Calorie Monitoring":
-                scc,
-
-            "Physical Activity":
-                faf,
-
-            "Technology Usage":
-                tue,
-
-            "Alcohol":
-                calc,
-
-            "Transportation":
-                mtrans
+            "Predicted Obesity Level":
+                pred_label.replace(
+                    "_",
+                    " "
+                )
 
         }
 
 
-        st.session_state.prediction_history.insert(
-            0,
+        st.session_state.prediction_history.append(
             history_record
         )
 
@@ -1247,16 +1244,11 @@ with tab_predict:
         )
 
 
-        # ====================================================
-        # PREDICTION RESULT
-        # ====================================================
-
         with result_col:
 
             st.subheader(
                 "🎯 Prediction Result"
             )
-
 
             st.metric(
 
@@ -1266,35 +1258,35 @@ with tab_predict:
                     "_",
                     " "
                 )
-            )
 
+            )
 
             st.caption(
                 f"Model used: **{chosen_model_name}**"
             )
-
 
             st.metric(
                 "Calculated BMI",
                 f"{bmi_value:.2f}"
             )
 
-
             st.markdown(
                 "**Recommendation:**"
             )
 
-
             st.write(
                 RECOMMENDATIONS.get(
+
                     pred_label,
+
                     "Consult a healthcare professional for guidance."
+
                 )
             )
 
 
         # ====================================================
-        # CLASS PROBABILITY CHART
+        # PROBABILITY CHART
         # ====================================================
 
         with chart_col:
@@ -1306,10 +1298,12 @@ with tab_predict:
 
                 try:
 
-                    proba = pipeline.predict_proba(
-                        input_row
-                    )[0]
-
+                    proba = (
+                        pipeline
+                        .predict_proba(
+                            input_row
+                        )[0]
+                    )
 
                     proba_df = pd.DataFrame({
 
@@ -1323,14 +1317,19 @@ with tab_predict:
 
 
                     proba_df = (
+
                         proba_df
+
                         .set_index(
                             "Obesity_Level"
                         )
+
                         .reindex(
                             obesity_order
                         )
+
                         .reset_index()
+
                     )
 
 
@@ -1344,17 +1343,25 @@ with tab_predict:
 
                         orientation="h",
 
+                        color="Obesity_Level",
+
+                        color_discrete_map=
+                            OBESITY_COLORS,
+
+                        category_orders={
+
+                            "Obesity_Level":
+                                obesity_order
+
+                        },
+
                         title=(
                             f"Class Probabilities — "
                             f"{chosen_model_name}"
                         ),
 
-                        text="Probability",
+                        text="Probability"
 
-                        category_orders={
-                            "Obesity_Level":
-                                obesity_order
-                        }
                     )
 
 
@@ -1365,10 +1372,15 @@ with tab_predict:
                         textposition="outside",
 
                         hovertemplate=(
+
                             "<b>Obesity Level:</b> %{y}<br>"
+
                             "<b>Probability:</b> %{x:.2%}"
+
                             "<extra></extra>"
+
                         )
+
                     )
 
 
@@ -1379,6 +1391,7 @@ with tab_predict:
                         title="Predicted Probability",
 
                         tickformat=".0%"
+
                     )
 
 
@@ -1389,14 +1402,17 @@ with tab_predict:
 
                     fig.update_layout(
 
-                        height=450,
+                        height=500,
 
                         margin=dict(
                             l=20,
                             r=30,
                             t=60,
                             b=40
-                        )
+                        ),
+
+                        showlegend=False
+
                     )
 
 
@@ -1409,12 +1425,13 @@ with tab_predict:
                         config={
                             "displayModeBar": False
                         }
+
                     )
 
-                except Exception:
+                except Exception as e:
 
-                    st.info(
-                        "Class probabilities could not be displayed."
+                    st.warning(
+                        f"Unable to display probabilities: {e}"
                     )
 
             else:
@@ -1434,9 +1451,7 @@ with tab_explore:
         "📊 Data Exploration"
     )
 
-
     df = load_cleaned_data()
-
 
     st.caption(
         f"Cleaned dataset: "
@@ -1445,28 +1460,25 @@ with tab_explore:
 
 
     # ========================================================
-    # DATA PREVIEW
+    # PREVIEW
     # ========================================================
 
     with st.expander(
-        "Preview raw table & summary statistics",
-        expanded=False
+        "Preview raw table & summary statistics"
     ):
 
         st.dataframe(
             df.head(20),
-            width="stretch"
+            use_container_width=True
         )
-
 
         st.write(
             "Numeric summary:"
         )
 
-
         st.dataframe(
             df.describe().T,
-            width="stretch"
+            use_container_width=True
         )
 
 
@@ -1477,7 +1489,6 @@ with tab_explore:
     st.subheader(
         "🔎 Filters"
     )
-
 
     fc1, fc2, fc3 = st.columns(3)
 
@@ -1497,6 +1508,7 @@ with tab_explore:
             ),
 
             key="gender_filter"
+
         )
 
 
@@ -1511,6 +1523,7 @@ with tab_explore:
             default=obesity_order,
 
             key="level_filter"
+
         )
 
 
@@ -1520,25 +1533,17 @@ with tab_explore:
 
             "Age range",
 
-            int(
-                df["Age"].min()
-            ),
+            int(df["Age"].min()),
 
-            int(
-                df["Age"].max()
-            ),
+            int(df["Age"].max()),
 
             (
-                int(
-                    df["Age"].min()
-                ),
-
-                int(
-                    df["Age"].max()
-                )
+                int(df["Age"].min()),
+                int(df["Age"].max())
             ),
 
             key="age_filter"
+
         )
 
 
@@ -1559,17 +1564,15 @@ with tab_explore:
         df["Age"].between(
             *age_range
         )
+
     ]
 
 
     st.caption(
-        f"Showing {len(filtered)} of {len(df)} records after filtering."
+        f"Showing {len(filtered)} of "
+        f"{len(df)} records after filtering."
     )
 
-
-    # ========================================================
-    # NUMERIC OPTIONS
-    # ========================================================
 
     num_options = (
         filtered
@@ -1582,7 +1585,7 @@ with tab_explore:
 
 
     # ========================================================
-    # DISTRIBUTION OVERVIEW
+    # DISTRIBUTION
     # ========================================================
 
     with st.container(
@@ -1593,16 +1596,12 @@ with tab_explore:
             "## 📊 Distribution Overview"
         )
 
-
-        chart1, chart2 = st.columns(
-            2,
-            gap="medium"
-        )
+        chart1, chart2 = st.columns(2)
 
 
-        # ====================================================
-        # PIE CHART
-        # ====================================================
+        # ----------------------------------------------------
+        # PIE
+        # ----------------------------------------------------
 
         with chart1:
 
@@ -1631,6 +1630,7 @@ with tab_explore:
                     .fillna(0)
 
                     .reset_index()
+
                 )
 
 
@@ -1659,11 +1659,14 @@ with tab_explore:
                         OBESITY_COLORS,
 
                     category_orders={
+
                         "Obesity_Level":
                             obesity_order
+
                     },
 
                     hole=0.32
+
                 )
 
 
@@ -1674,16 +1677,22 @@ with tab_explore:
                     textposition="inside",
 
                     hovertemplate=(
+
                         "<b>Obesity Level:</b> %{label}<br>"
+
                         "<b>Count:</b> %{value}<br>"
+
                         "<b>Percentage:</b> %{percent}"
+
                         "<extra></extra>"
+
                     ),
 
                     domain=dict(
                         x=[0.02, 0.98],
                         y=[0.05, 0.85]
                     )
+
                 )
 
 
@@ -1715,7 +1724,9 @@ with tab_explore:
                         font=dict(
                             size=10
                         )
+
                     )
+
                 )
 
 
@@ -1728,12 +1739,13 @@ with tab_explore:
                     config={
                         "displayModeBar": False
                     }
+
                 )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # HISTOGRAM
-        # ====================================================
+        # ----------------------------------------------------
 
         with chart2:
 
@@ -1756,141 +1768,92 @@ with tab_explore:
                     )
 
                     .columns
-
                     .tolist()
+
                 )
 
 
-                if numeric_cols:
+                hist_col = st.selectbox(
 
-                    hist_col = st.selectbox(
+                    "Choose a numeric column",
 
-                        "Choose a numeric column",
+                    numeric_cols,
 
-                        numeric_cols,
+                    index=(
 
-                        index=(
+                        numeric_cols.index("BMI")
 
-                            numeric_cols.index(
-                                "BMI"
-                            )
+                        if "BMI" in numeric_cols
 
-                            if "BMI" in numeric_cols
+                        else 0
 
-                            else 0
-                        ),
+                    ),
 
-                        key="hist_col"
-                    )
+                    key="hist_col"
+
+                )
 
 
-                    hist_bins = st.slider(
+                hist_bins = st.slider(
 
-                        "Number of bins",
+                    "Number of bins",
 
-                        min_value=5,
+                    5,
 
-                        max_value=40,
+                    40,
 
-                        value=20,
+                    20,
 
-                        step=5,
+                    5,
 
-                        key="hist_bins"
-                    )
+                    key="hist_bins"
 
-
-                    fig = px.histogram(
-
-                        filtered,
-
-                        x=hist_col,
-
-                        nbins=hist_bins,
-
-                        marginal="box",
-
-                        opacity=0.85,
-
-                        title=f"Distribution of {hist_col}"
-                    )
+                )
 
 
-                    fig.update_traces(
+                fig = px.histogram(
 
-                        hovertemplate=(
+                    filtered,
 
-                            f"<b>{hist_col}</b>: %{{x}}<br>"
+                    x=hist_col,
 
-                            "<b>Count:</b> %{y}"
+                    nbins=hist_bins,
 
-                            "<extra></extra>"
-                        )
-                    )
+                    marginal="box",
 
+                    opacity=0.85,
 
-                    fig.update_layout(
+                    title=f"Distribution of {hist_col}"
 
-                        height=450,
-
-                        xaxis=dict(
-
-                            title=hist_col,
-
-                            showgrid=False
-                        ),
-
-                        yaxis=dict(
-
-                            title="Number of Records",
-
-                            showgrid=True
-                        ),
-
-                        bargap=0.05,
-
-                        hovermode="x unified",
-
-                        margin=dict(
-                            l=50,
-                            r=30,
-                            t=60,
-                            b=50
-                        )
-                    )
+                )
 
 
-                    st.plotly_chart(
-
-                        fig,
-
-                        use_container_width=True,
-
-                        config={
-                            "displayModeBar": False
-                        }
-                    )
+                fig.update_layout(
+                    height=450
+                )
 
 
-                    st.caption(
-                        "💡 Hover over the bars to view "
-                        "the number of records in each range."
-                    )
+                st.plotly_chart(
+
+                    fig,
+
+                    use_container_width=True,
+
+                    config={
+                        "displayModeBar": False
+                    }
+
+                )
 
 
     # ========================================================
-    # SCATTER + BOXPLOT
+    # SCATTER + BOX
     # ========================================================
 
     st.divider()
 
-
     chart3, chart4 = st.columns(2)
 
-
-    # ========================================================
-    # SCATTERPLOT
-    # ========================================================
 
     with chart3:
 
@@ -1912,16 +1875,16 @@ with tab_explore:
 
                 index=(
 
-                    num_options.index(
-                        "Height"
-                    )
+                    num_options.index("Height")
 
                     if "Height" in num_options
 
                     else 0
+
                 ),
 
                 key="scatter_x"
+
             )
 
 
@@ -1933,9 +1896,7 @@ with tab_explore:
 
                 index=(
 
-                    num_options.index(
-                        "Weight"
-                    )
+                    num_options.index("Weight")
 
                     if "Weight" in num_options
 
@@ -1943,9 +1904,11 @@ with tab_explore:
                         1,
                         len(num_options) - 1
                     )
+
                 ),
 
                 key="scatter_y"
+
             )
 
 
@@ -1968,17 +1931,16 @@ with tab_explore:
                     OBESITY_COLORS,
 
                 hover_data=[
-
                     "Gender",
                     "Age",
                     "Height",
                     "Weight",
                     "BMI",
                     "Obesity_Level"
-
                 ],
 
                 title=f"{sy} vs {sx}"
+
             )
 
 
@@ -1988,17 +1950,12 @@ with tab_explore:
                     size=8,
                     opacity=0.75
                 )
+
             )
 
 
             fig.update_layout(
-
-                height=550,
-
-                legend=dict(
-                    title="Obesity Level",
-                    traceorder="normal"
-                )
+                height=550
             )
 
 
@@ -2007,12 +1964,9 @@ with tab_explore:
                 fig,
 
                 use_container_width=True
+
             )
 
-
-    # ========================================================
-    # BOXPLOT
-    # ========================================================
 
     with chart4:
 
@@ -2034,16 +1988,16 @@ with tab_explore:
 
                 index=(
 
-                    num_options.index(
-                        "Weight"
-                    )
+                    num_options.index("Weight")
 
                     if "Weight" in num_options
 
                     else 0
+
                 ),
 
                 key="box_col"
+
             )
 
 
@@ -2068,19 +2022,7 @@ with tab_explore:
                 points="outliers",
 
                 title=f"{box_col} by Obesity Level"
-            )
 
-
-            fig.update_traces(
-
-                hovertemplate=(
-
-                    "<b>Obesity Level:</b> %{x}<br>"
-
-                    f"<b>{box_col}:</b> %{{y}}"
-
-                    "<extra></extra>"
-                )
             )
 
 
@@ -2091,6 +2033,7 @@ with tab_explore:
                 xaxis_tickangle=-45,
 
                 showlegend=False
+
             )
 
 
@@ -2099,23 +2042,26 @@ with tab_explore:
                 fig,
 
                 use_container_width=True
+
             )
 
 
     # ========================================================
-    # CORRELATION HEATMAP
+    # HEATMAP
     # ========================================================
 
     st.divider()
-
 
     st.subheader(
         "🔥 Interactive Correlation Heatmap"
     )
 
 
-    numeric_data = filtered.select_dtypes(
-        include=np.number
+    numeric_data = (
+        filtered
+        .select_dtypes(
+            include=np.number
+        )
     )
 
 
@@ -2131,6 +2077,7 @@ with tab_explore:
         aspect="auto",
 
         title="Correlation Between Numeric Variables"
+
     )
 
 
@@ -2145,7 +2092,9 @@ with tab_explore:
             "<b>Correlation:</b> %{z:.2f}"
 
             "<extra></extra>"
+
         )
+
     )
 
 
@@ -2159,24 +2108,18 @@ with tab_explore:
         fig,
 
         use_container_width=True
+
     )
 
 
     # ========================================================
-    # OLAP PIVOT EXPLORER
+    # OLAP
     # ========================================================
 
     st.divider()
 
-
     st.subheader(
         "📋 OLAP-style Pivot Explorer"
-    )
-
-
-    st.caption(
-        "Build your own multidimensional summary table by choosing "
-        "row and column dimensions, a numeric measure, and an aggregation."
     )
 
 
@@ -2191,6 +2134,7 @@ with tab_explore:
         .columns
 
         .tolist()
+
     )
 
 
@@ -2214,9 +2158,11 @@ with tab_explore:
                 if "Gender" in categorical_options
 
                 else 0
+
             ),
 
             key="row_dimension"
+
         )
 
 
@@ -2234,12 +2180,15 @@ with tab_explore:
                     "Obesity_Level"
                 )
 
-                if "Obesity_Level" in categorical_options
+                if "Obesity_Level"
+                in categorical_options
 
                 else 0
+
             ),
 
             key="column_dimension"
+
         )
 
 
@@ -2253,16 +2202,16 @@ with tab_explore:
 
             index=(
 
-                num_options.index(
-                    "BMI"
-                )
+                num_options.index("BMI")
 
                 if "BMI" in num_options
 
                 else 0
+
             ),
 
             key="pivot_measure"
+
         )
 
 
@@ -2280,6 +2229,7 @@ with tab_explore:
             ],
 
             key="pivot_aggregation"
+
         )
 
 
@@ -2300,6 +2250,7 @@ with tab_explore:
             margins=True,
 
             margins_name="All (Roll-up)"
+
         ).round(2)
 
 
@@ -2307,13 +2258,14 @@ with tab_explore:
 
             pivot,
 
-            width="stretch"
+            use_container_width=True
+
         )
 
     else:
 
         st.warning(
-            "Choose two different dimensions for rows and columns."
+            "Choose two different dimensions."
         )
 
 
@@ -2327,10 +2279,8 @@ with tab_history:
         "🕒 Prediction History"
     )
 
-
     st.caption(
-        "This tab records predictions made during the current "
-        "Streamlit session."
+        "Your prediction results from this session are displayed here."
     )
 
 
@@ -2341,15 +2291,10 @@ with tab_history:
     if not st.session_state.prediction_history:
 
         st.info(
-            "No prediction history yet. "
-            "Go to the **Prediction** tab and make a prediction "
-            "to see it here."
+            "No predictions have been made yet. "
+            "Go to the **Prediction** tab to generate a prediction."
         )
 
-
-    # ========================================================
-    # HISTORY AVAILABLE
-    # ========================================================
 
     else:
 
@@ -2358,14 +2303,9 @@ with tab_history:
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # SUMMARY
-        # ====================================================
-
-        st.subheader(
-            "📌 History Summary"
-        )
-
+        # ----------------------------------------------------
 
         h1, h2, h3 = st.columns(3)
 
@@ -2381,8 +2321,8 @@ with tab_history:
         with h2:
 
             st.metric(
-                "Most Recent Prediction",
-                history_df.iloc[0][
+                "Latest Prediction",
+                history_df.iloc[-1][
                     "Predicted Obesity Level"
                 ]
             )
@@ -2396,12 +2336,15 @@ with tab_history:
             )
 
 
-        # ====================================================
-        # PREDICTION TABLE
-        # ====================================================
+        st.divider()
+
+
+        # ----------------------------------------------------
+        # HISTORY TABLE
+        # ----------------------------------------------------
 
         st.subheader(
-            "📋 Previous Predictions"
+            "📋 Prediction Records"
         )
 
 
@@ -2412,43 +2355,16 @@ with tab_history:
             use_container_width=True,
 
             hide_index=True
+
         )
 
 
-        # ====================================================
-        # DOWNLOAD HISTORY
-        # ====================================================
+        # ----------------------------------------------------
+        # DISTRIBUTION
+        # ----------------------------------------------------
 
         st.subheader(
-            "💾 Export History"
-        )
-
-
-        csv_data = history_df.to_csv(
-            index=False
-        ).encode("utf-8")
-
-
-        st.download_button(
-
-            label="⬇️ Download Prediction History (CSV)",
-
-            data=csv_data,
-
-            file_name="prediction_history.csv",
-
-            mime="text/csv",
-
-            use_container_width=True
-        )
-
-
-        # ====================================================
-        # HISTORY DISTRIBUTION
-        # ====================================================
-
-        st.subheader(
-            "📊 Prediction History Distribution"
+            "📊 Prediction Distribution"
         )
 
 
@@ -2461,6 +2377,7 @@ with tab_history:
             .value_counts()
 
             .reset_index()
+
         )
 
 
@@ -2478,32 +2395,18 @@ with tab_history:
 
             y="Count",
 
-            title="Predicted Obesity Levels",
+            color="Obesity Level",
 
-            text="Count"
-        )
+            color_discrete_map=
+                OBESITY_COLORS,
 
+            title="Your Prediction History"
 
-        fig_history.update_traces(
-
-            textposition="outside",
-
-            hovertemplate=(
-
-                "<b>Obesity Level:</b> %{x}<br>"
-
-                "<b>Predictions:</b> %{y}"
-
-                "<extra></extra>"
-            )
         )
 
 
         fig_history.update_layout(
-
-            height=450,
-
-            xaxis_tickangle=-45
+            height=450
         )
 
 
@@ -2512,23 +2415,19 @@ with tab_history:
             fig_history,
 
             use_container_width=True
+
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # CLEAR HISTORY
-        # ====================================================
+        # ----------------------------------------------------
 
         st.divider()
 
-
         if st.button(
-
             "🗑️ Clear Prediction History",
-
-            type="secondary",
-
-            use_container_width=True
+            type="secondary"
         ):
 
             st.session_state.prediction_history = []
@@ -2548,10 +2447,26 @@ with tab_performance:
 
 
     # ========================================================
-    # LOAD COMPARISON RESULTS
+    # LOAD COMPARISON
     # ========================================================
 
-    comparison_df = load_comparison_table()
+    try:
+
+        comparison_df = (
+            load_comparison_table()
+        )
+
+    except Exception as e:
+
+        st.error(
+            "Unable to load model comparison table."
+        )
+
+        st.code(
+            str(e)
+        )
+
+        st.stop()
 
 
     if comparison_df.index.name is None:
@@ -2560,7 +2475,7 @@ with tab_performance:
 
 
     # ========================================================
-    # 1. CONSOLIDATED COMPARISON TABLE
+    # CONSOLIDATED TABLE
     # ========================================================
 
     st.subheader(
@@ -2569,11 +2484,12 @@ with tab_performance:
 
 
     st.caption(
-        "`Train_Accuracy_InSample` is the model scored on the exact "
-        "rows it was fit on. It can be very high for flexible models "
-        "and should not be used alone as an overfitting diagnostic. "
-        "`Train_Accuracy_CV` is based on held-out training folds and "
-        "is the more meaningful value for checking generalisation."
+
+        "`Train_Accuracy_InSample` is the model scored on the "
+        "same rows it was fitted on. `Train_Accuracy_CV` is based "
+        "on held-out training folds and is more meaningful for "
+        "checking generalisation."
+
     )
 
 
@@ -2584,15 +2500,16 @@ with tab_performance:
         ),
 
         use_container_width=True
+
     )
 
 
     # ========================================================
-    # 2. OUTER COMPARISON
+    # OUTER COMPARISON
     # ========================================================
 
     st.subheader(
-        "Outer Comparison — Models Against Each Other (Test Set)"
+        "Outer Comparison — Test Set"
     )
 
 
@@ -2612,7 +2529,9 @@ with tab_performance:
     missing_outer = [
 
         col
+
         for col in outer_metrics
+
         if col not in comparison_df.columns
 
     ]
@@ -2621,9 +2540,7 @@ with tab_performance:
     if missing_outer:
 
         st.warning(
-
-            f"The comparison table is missing these columns: "
-            f"{missing_outer}"
+            f"Missing columns: {missing_outer}"
         )
 
     else:
@@ -2641,6 +2558,7 @@ with tab_performance:
                     "index": "Model"
                 }
             )
+
         )
 
 
@@ -2651,6 +2569,7 @@ with tab_performance:
             var_name="Metric",
 
             value_name="Score"
+
         )
 
 
@@ -2667,6 +2586,7 @@ with tab_performance:
             barmode="group",
 
             title="Model Performance Comparison"
+
         )
 
 
@@ -2681,7 +2601,9 @@ with tab_performance:
                 "<b>Score:</b> %{y:.2%}"
 
                 "<extra></extra>"
+
             )
+
         )
 
 
@@ -2692,14 +2614,12 @@ with tab_performance:
             title="Score",
 
             tickformat=".0%"
+
         )
 
 
         fig.update_layout(
-
-            height=500,
-
-            hovermode="x unified"
+            height=500
         )
 
 
@@ -2708,37 +2628,34 @@ with tab_performance:
             fig,
 
             use_container_width=True
+
         )
 
 
     # ========================================================
-    # 3. TRAIN VS TEST ACCURACY
+    # TRAIN VS TEST
     # ========================================================
 
     st.subheader(
-        "Inner Comparison — Train vs Test Accuracy (Overfitting Check)"
+        "Inner Comparison — Train vs Test Accuracy"
     )
 
 
     inner_tab1, inner_tab2 = st.tabs(
 
         [
-            "Cross-validated (trust this)",
-            "In-sample (for transparency)"
+            "Cross-validated",
+            "In-sample"
         ]
+
     )
 
 
-    # ========================================================
-    # 3A. CROSS VALIDATED
-    # ========================================================
+    # --------------------------------------------------------
+    # CV
+    # --------------------------------------------------------
 
     with inner_tab1:
-
-        st.subheader(
-            "Inner Comparison — Train vs Test Accuracy"
-        )
-
 
         accuracy_columns = [
 
@@ -2749,24 +2666,13 @@ with tab_performance:
         ]
 
 
-        missing_accuracy = [
+        if all(
 
-            col
+            col in comparison_df.columns
+
             for col in accuracy_columns
-            if col not in comparison_df.columns
 
-        ]
-
-
-        if missing_accuracy:
-
-            st.warning(
-
-                f"The comparison table is missing: "
-                f"{missing_accuracy}"
-            )
-
-        else:
+        ):
 
             accuracy_df = (
 
@@ -2781,6 +2687,7 @@ with tab_performance:
                         "index": "Model"
                     }
                 )
+
             )
 
 
@@ -2791,6 +2698,7 @@ with tab_performance:
                 var_name="Dataset",
 
                 value_name="Accuracy"
+
             )
 
 
@@ -2809,6 +2717,7 @@ with tab_performance:
                 text="Accuracy",
 
                 title="Cross-Validated Train vs Test Accuracy"
+
             )
 
 
@@ -2816,18 +2725,8 @@ with tab_performance:
 
                 texttemplate="%{text:.1%}",
 
-                textposition="outside",
+                textposition="outside"
 
-                hovertemplate=(
-
-                    "<b>Model:</b> %{x}<br>"
-
-                    "<b>Dataset:</b> %{fullData.name}<br>"
-
-                    "<b>Accuracy:</b> %{y:.2%}"
-
-                    "<extra></extra>"
-                )
             )
 
 
@@ -2835,20 +2734,13 @@ with tab_performance:
 
                 range=[0, 1.05],
 
-                title="Accuracy",
-
                 tickformat=".0%"
-            )
 
-
-            fig.update_xaxes(
-                title="Model"
             )
 
 
             fig.update_layout(
-                height=500,
-                hovermode="x unified"
+                height=500
             )
 
 
@@ -2857,28 +2749,24 @@ with tab_performance:
                 fig,
 
                 use_container_width=True
+
             )
 
 
             st.caption(
 
-                "Train accuracy here is cross-validated: each validation "
-                "fold contains rows that were not used to fit that fold's "
-                "model. This makes it a more meaningful comparison with "
-                "the final held-out test accuracy."
+                "Cross-validated training accuracy is a more "
+                "meaningful comparison with the final held-out "
+                "test accuracy."
+
             )
 
 
-    # ========================================================
-    # 3B. IN-SAMPLE
-    # ========================================================
+    # --------------------------------------------------------
+    # IN SAMPLE
+    # --------------------------------------------------------
 
     with inner_tab2:
-
-        st.subheader(
-            "In-sample Train Accuracy vs Test Accuracy"
-        )
-
 
         accuracy_columns = [
 
@@ -2889,24 +2777,13 @@ with tab_performance:
         ]
 
 
-        missing_accuracy = [
+        if all(
 
-            col
+            col in comparison_df.columns
+
             for col in accuracy_columns
-            if col not in comparison_df.columns
 
-        ]
-
-
-        if missing_accuracy:
-
-            st.warning(
-
-                f"The comparison table is missing: "
-                f"{missing_accuracy}"
-            )
-
-        else:
+        ):
 
             accuracy_df = (
 
@@ -2921,6 +2798,7 @@ with tab_performance:
                         "index": "Model"
                     }
                 )
+
             )
 
 
@@ -2931,6 +2809,7 @@ with tab_performance:
                 var_name="Dataset",
 
                 value_name="Accuracy"
+
             )
 
 
@@ -2949,6 +2828,7 @@ with tab_performance:
                 text="Accuracy",
 
                 title="In-Sample Train vs Test Accuracy"
+
             )
 
 
@@ -2956,18 +2836,8 @@ with tab_performance:
 
                 texttemplate="%{text:.1%}",
 
-                textposition="outside",
+                textposition="outside"
 
-                hovertemplate=(
-
-                    "<b>Model:</b> %{x}<br>"
-
-                    "<b>Dataset:</b> %{fullData.name}<br>"
-
-                    "<b>Accuracy:</b> %{y:.2%}"
-
-                    "<extra></extra>"
-                )
             )
 
 
@@ -2975,14 +2845,8 @@ with tab_performance:
 
                 range=[0, 1.05],
 
-                title="Accuracy",
-
                 tickformat=".0%"
-            )
 
-
-            fig.update_xaxes(
-                title="Model"
             )
 
 
@@ -2996,19 +2860,12 @@ with tab_performance:
                 fig,
 
                 use_container_width=True
-            )
 
-
-            st.caption(
-
-                "In-sample accuracy means the model is evaluated on the "
-                "same training rows it was fitted on. It is expected to "
-                "be high for flexible models and is shown for transparency."
             )
 
 
     # ========================================================
-    # 4. WEIGHTED VS MACRO
+    # WEIGHTED VS MACRO
     # ========================================================
 
     st.subheader(
@@ -3018,32 +2875,33 @@ with tab_performance:
 
     st.caption(
 
-        "Weighted averages account for the number of observations "
-        "in each class, while macro averages give every class equal "
-        "importance. A larger difference can indicate that performance "
-        "varies across obesity classes."
+        "Weighted averages account for class frequency, while "
+        "macro averages give every obesity class equal importance."
+
     )
 
 
-    macro_metric_tabs = st.tabs(
+    macro_tabs = st.tabs(
 
         [
             "Precision",
             "Recall",
             "F1"
         ]
+
     )
 
 
     for tab, metric in zip(
 
-        macro_metric_tabs,
+        macro_tabs,
 
         [
             "Precision",
             "Recall",
             "F1"
         ]
+
     ):
 
         with tab:
@@ -3057,30 +2915,20 @@ with tab_performance:
             )
 
 
-            metric_columns = [
+            if (
 
-                weighted_col,
+                weighted_col
+                not in comparison_df.columns
+
+                or
 
                 macro_col
+                not in comparison_df.columns
 
-            ]
-
-
-            missing_metric = [
-
-                col
-                for col in metric_columns
-                if col not in comparison_df.columns
-
-            ]
-
-
-            if missing_metric:
+            ):
 
                 st.warning(
-
-                    f"The comparison table is missing: "
-                    f"{missing_metric}"
+                    "Required columns are unavailable."
                 )
 
                 continue
@@ -3089,7 +2937,10 @@ with tab_performance:
             metric_df = (
 
                 comparison_df[
-                    metric_columns
+                    [
+                        weighted_col,
+                        macro_col
+                    ]
                 ]
 
                 .reset_index()
@@ -3099,6 +2950,7 @@ with tab_performance:
                         "index": "Model"
                     }
                 )
+
             )
 
 
@@ -3109,6 +2961,7 @@ with tab_performance:
                 var_name="Average",
 
                 value_name="Score"
+
             )
 
 
@@ -3117,13 +2970,11 @@ with tab_performance:
                 metric_long["Average"]
 
                 .str.replace(
-
                     f"{metric}_",
-
                     "",
-
                     regex=False
                 )
+
             )
 
 
@@ -3142,6 +2993,7 @@ with tab_performance:
                 text="Score",
 
                 title=f"{metric}: Weighted vs Macro"
+
             )
 
 
@@ -3149,18 +3001,8 @@ with tab_performance:
 
                 texttemplate="%{text:.1%}",
 
-                textposition="outside",
+                textposition="outside"
 
-                hovertemplate=(
-
-                    "<b>Model:</b> %{x}<br>"
-
-                    "<b>Average:</b> %{fullData.name}<br>"
-
-                    f"<b>{metric}:</b> %{{y:.2%}}"
-
-                    "<extra></extra>"
-                )
             )
 
 
@@ -3168,14 +3010,8 @@ with tab_performance:
 
                 range=[0, 1.05],
 
-                title=metric,
-
                 tickformat=".0%"
-            )
 
-
-            fig.update_xaxes(
-                title="Model"
             )
 
 
@@ -3189,35 +3025,27 @@ with tab_performance:
                 fig,
 
                 use_container_width=True
+
             )
 
 
     # ========================================================
-    # 5. MODEL EVALUATION
+    # MODEL EVALUATION
     # ========================================================
 
     st.divider()
-
 
     st.subheader(
         "Model Evaluation"
     )
 
 
-    st.caption(
-
-        "Select a model to inspect its test-set predictions, "
-        "confusion matrix, ROC curves, classification report, "
-        "and feature importance."
-    )
-
-
-    available_eval_models = list(
+    eval_available_models = list(
         models.keys()
     )
 
 
-    if not available_eval_models:
+    if not eval_available_models:
 
         st.error(
             "No trained models are available."
@@ -3227,13 +3055,15 @@ with tab_performance:
 
         default_index = (
 
-            available_eval_models.index(
+            eval_available_models.index(
                 best_model_name
             )
 
-            if best_model_name in available_eval_models
+            if best_model_name
+            in eval_available_models
 
             else 0
+
         )
 
 
@@ -3241,22 +3071,26 @@ with tab_performance:
 
             "Choose a model to inspect",
 
-            available_eval_models,
+            eval_available_models,
 
             index=default_index,
 
             key="eval_model"
+
         )
 
 
         # ====================================================
-        # REBUILD TEST SPLIT
+        # TEST DATA
         # ====================================================
 
-        X_train, X_test, y_train, y_test = (
-            rebuild_test_split(
-                metadata
-            )
+        (
+            X_train,
+            X_test,
+            y_train,
+            y_test
+        ) = rebuild_test_split(
+            metadata
         )
 
 
@@ -3265,17 +3099,27 @@ with tab_performance:
         ]
 
 
-        # ====================================================
-        # PREDICTIONS
-        # ====================================================
+        try:
 
-        y_pred = eval_pipeline.predict(
-            X_test
-        )
+            y_pred = eval_pipeline.predict(
+                X_test
+            )
+
+        except Exception as e:
+
+            st.error(
+                "Unable to generate test-set predictions."
+            )
+
+            st.code(
+                str(e)
+            )
+
+            st.stop()
 
 
         # ====================================================
-        # TEST SET METRICS
+        # METRICS
         # ====================================================
 
         st.markdown(
@@ -3285,9 +3129,11 @@ with tab_performance:
 
         if eval_model_name in comparison_df.index:
 
-            selected_row = comparison_df.loc[
-                eval_model_name
-            ]
+            selected_row = (
+                comparison_df.loc[
+                    eval_model_name
+                ]
+            )
 
 
             m1, m2, m3, m4 = st.columns(4)
@@ -3298,6 +3144,7 @@ with tab_performance:
                 "Test Accuracy",
 
                 f"{selected_row['Test_Accuracy']:.1%}"
+
             )
 
 
@@ -3306,6 +3153,7 @@ with tab_performance:
                 "Precision",
 
                 f"{selected_row['Precision_Weighted']:.1%}"
+
             )
 
 
@@ -3314,6 +3162,7 @@ with tab_performance:
                 "Recall",
 
                 f"{selected_row['Recall_Weighted']:.1%}"
+
             )
 
 
@@ -3322,54 +3171,42 @@ with tab_performance:
                 "F1",
 
                 f"{selected_row['F1_Weighted']:.1%}"
+
             )
 
 
             st.markdown(
-                "**Macro-average metrics** "
-                "(every class counted equally)"
+                "**Macro-average metrics**"
             )
 
 
-            m5, m6, m7, m8 = st.columns(4)
+            m5, m6, m7 = st.columns(3)
 
 
             m5.metric(
-                "—",
-                ""
+
+                "Precision",
+
+                f"{selected_row['Precision_Macro']:.1%}"
+
             )
 
 
             m6.metric(
 
-                "Precision",
+                "Recall",
 
-                f"{selected_row['Precision_Macro']:.1%}"
+                f"{selected_row['Recall_Macro']:.1%}"
+
             )
 
 
             m7.metric(
 
-                "Recall",
-
-                f"{selected_row['Recall_Macro']:.1%}"
-            )
-
-
-            m8.metric(
-
                 "F1",
 
                 f"{selected_row['F1_Macro']:.1%}"
-            )
 
-
-        else:
-
-            st.warning(
-
-                f"'{eval_model_name}' was not found "
-                "in the comparison table."
             )
 
 
@@ -3380,9 +3217,9 @@ with tab_performance:
         cm_col, roc_col = st.columns(2)
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # CONFUSION MATRIX
-        # ====================================================
+        # ----------------------------------------------------
 
         with cm_col:
 
@@ -3393,6 +3230,25 @@ with tab_performance:
                 st.markdown(
                     "### Confusion Matrix"
                 )
+
+
+                ordinal_order = [
+
+                    "Insufficient_Weight",
+
+                    "Normal_Weight",
+
+                    "Overweight_Level_I",
+
+                    "Overweight_Level_II",
+
+                    "Obesity_Type_I",
+
+                    "Obesity_Type_II",
+
+                    "Obesity_Type_III"
+
+                ]
 
 
                 actual_classes = list(
@@ -3406,7 +3262,9 @@ with tab_performance:
                         cls
                     )
 
-                    for cls in ORDINAL_ORDER
+                    for cls in ordinal_order
+
+                    if cls in actual_classes
 
                 ]
 
@@ -3418,6 +3276,7 @@ with tab_performance:
                     y_pred,
 
                     labels=ordinal_indices
+
                 )
 
 
@@ -3425,9 +3284,10 @@ with tab_performance:
 
                     cm,
 
-                    index=ORDINAL_ORDER,
+                    index=ordinal_order,
 
-                    columns=ORDINAL_ORDER
+                    columns=ordinal_order
+
                 )
 
 
@@ -3453,34 +3313,12 @@ with tab_performance:
                         "color": "Count"
 
                     }
-                )
 
-
-                fig_cm.update_traces(
-
-                    hovertemplate=(
-
-                        "<b>Actual:</b> %{y}<br>"
-
-                        "<b>Predicted:</b> %{x}<br>"
-
-                        "<b>Count:</b> %{z}"
-
-                        "<extra></extra>"
-                    )
                 )
 
 
                 fig_cm.update_xaxes(
-
-                    title="Predicted",
-
                     tickangle=-45
-                )
-
-
-                fig_cm.update_yaxes(
-                    title="Actual"
                 )
 
 
@@ -3489,16 +3327,12 @@ with tab_performance:
                     height=600,
 
                     margin=dict(
-
                         l=20,
-
                         r=20,
-
                         t=70,
-
                         b=130
-
                     )
+
                 )
 
 
@@ -3507,12 +3341,13 @@ with tab_performance:
                     fig_cm,
 
                     use_container_width=True
+
                 )
 
 
-        # ====================================================
-        # ROC CURVES
-        # ====================================================
+        # ----------------------------------------------------
+        # ROC
+        # ----------------------------------------------------
 
         with roc_col:
 
@@ -3530,191 +3365,170 @@ with tab_performance:
                     "predict_proba"
                 ):
 
-                    actual_classes = list(
-                        label_encoder.classes_
-                    )
+                    try:
 
-
-                    ordinal_indices = [
-
-                        actual_classes.index(
-                            cls
-                        )
-
-                        for cls in ORDINAL_ORDER
-
-                    ]
-
-
-                    y_proba = (
-                        eval_pipeline
-                        .predict_proba(
-                            X_test
-                        )
-                    )
-
-
-                    roc_rows = []
-
-
-                    for class_name, class_index in zip(
-
-                        ORDINAL_ORDER,
-
-                        ordinal_indices
-
-                    ):
-
-                        y_true_binary = (
-
-                            y_test == class_index
-
-                        ).astype(int)
-
-
-                        y_score = y_proba[
-                            :,
-                            class_index
-                        ]
-
-
-                        fpr, tpr, _ = roc_curve(
-
-                            y_true_binary,
-
-                            y_score
+                        y_proba = (
+                            eval_pipeline
+                            .predict_proba(
+                                X_test
+                            )
                         )
 
 
-                        roc_auc_value = auc(
-
-                            fpr,
-
-                            tpr
-                        )
+                        roc_rows = []
 
 
-                        for x, y in zip(
-                            fpr,
-                            tpr
+                        for class_name, class_index in zip(
+
+                            ordinal_order,
+
+                            ordinal_indices
+
                         ):
 
-                            roc_rows.append({
+                            y_true_binary = (
 
-                                "False Positive Rate":
-                                    x,
+                                y_test
+                                == class_index
 
-                                "True Positive Rate":
-                                    y,
+                            ).astype(int)
+
+
+                            y_score = (
+                                y_proba[
+                                    :,
+                                    class_index
+                                ]
+                            )
+
+
+                            fpr, tpr, _ = (
+                                roc_curve(
+                                    y_true_binary,
+                                    y_score
+                                )
+                            )
+
+
+                            roc_auc_value = auc(
+                                fpr,
+                                tpr
+                            )
+
+
+                            for x, y in zip(
+                                fpr,
+                                tpr
+                            ):
+
+                                roc_rows.append({
+
+                                    "False Positive Rate":
+                                        x,
+
+                                    "True Positive Rate":
+                                        y,
+
+                                    "Obesity Level":
+                                        class_name,
+
+                                    "AUC":
+                                        roc_auc_value
+
+                                })
+
+
+                        roc_df = pd.DataFrame(
+                            roc_rows
+                        )
+
+
+                        fig_roc = px.line(
+
+                            roc_df,
+
+                            x="False Positive Rate",
+
+                            y="True Positive Rate",
+
+                            color="Obesity Level",
+
+                            category_orders={
 
                                 "Obesity Level":
-                                    class_name,
+                                    ordinal_order
 
-                                "AUC":
-                                    roc_auc_value
+                            },
 
-                            })
+                            title=(
+                                f"ROC Curves — "
+                                f"{eval_model_name}"
+                            ),
 
-
-                    roc_df = pd.DataFrame(
-                        roc_rows
-                    )
-
-
-                    fig_roc = px.line(
-
-                        roc_df,
-
-                        x="False Positive Rate",
-
-                        y="True Positive Rate",
-
-                        color="Obesity Level",
-
-                        category_orders={
-
-                            "Obesity Level":
-                                ORDINAL_ORDER
-
-                        },
-
-                        title=(
-                            f"ROC Curves — "
-                            f"{eval_model_name}"
-                        ),
-
-                        hover_data=[
-                            "AUC"
-                        ]
-                    )
-
-
-                    fig_roc.add_scatter(
-
-                        x=[0, 1],
-
-                        y=[0, 1],
-
-                        mode="lines",
-
-                        name="Random Classifier",
-
-                        line=dict(
-                            dash="dot"
-                        )
-                    )
-
-
-                    fig_roc.update_xaxes(
-
-                        range=[0, 1],
-
-                        title="False Positive Rate"
-                    )
-
-
-                    fig_roc.update_yaxes(
-
-                        range=[0, 1],
-
-                        title="True Positive Rate"
-                    )
-
-
-                    fig_roc.update_layout(
-
-                        height=600,
-
-                        hovermode="closest",
-
-                        margin=dict(
-
-                            l=20,
-
-                            r=20,
-
-                            t=70,
-
-                            b=80
+                            hover_data=["AUC"]
 
                         )
-                    )
 
 
-                    st.plotly_chart(
+                        fig_roc.add_scatter(
 
-                        fig_roc,
+                            x=[0, 1],
 
-                        use_container_width=True
-                    )
+                            y=[0, 1],
 
+                            mode="lines",
+
+                            name="Random Classifier",
+
+                            line=dict(
+                                dash="dot"
+                            )
+
+                        )
+
+
+                        fig_roc.update_xaxes(
+
+                            range=[0, 1],
+
+                            title="False Positive Rate"
+
+                        )
+
+
+                        fig_roc.update_yaxes(
+
+                            range=[0, 1],
+
+                            title="True Positive Rate"
+
+                        )
+
+
+                        fig_roc.update_layout(
+                            height=600
+                        )
+
+
+                        st.plotly_chart(
+
+                            fig_roc,
+
+                            use_container_width=True
+
+                        )
+
+
+                    except Exception as e:
+
+                        st.warning(
+                            f"Unable to generate ROC curves: {e}"
+                        )
 
                 else:
 
                     st.info(
-
-                        "This model does not expose "
-                        "class probabilities for ROC curves."
+                        "This model does not expose class probabilities."
                     )
 
 
@@ -3723,10 +3537,8 @@ with tab_performance:
         # ====================================================
 
         with st.expander(
-
             f"Full Classification Report — "
             f"{eval_model_name}"
-
         ):
 
             report = classification_report(
@@ -3735,11 +3547,13 @@ with tab_performance:
 
                 y_pred,
 
-                target_names=label_encoder.classes_,
+                target_names=
+                    label_encoder.classes_,
 
                 zero_division=0,
 
                 output_dict=True
+
             )
 
 
@@ -3752,6 +3566,7 @@ with tab_performance:
                 .T
 
                 .round(3)
+
             )
 
 
@@ -3760,155 +3575,130 @@ with tab_performance:
                 report_df,
 
                 use_container_width=True
+
             )
 
 
-    # ========================================================
-    # RANDOM FOREST FEATURE IMPORTANCE
-    # ========================================================
+        # ====================================================
+        # RANDOM FOREST FEATURE IMPORTANCE
+        # ====================================================
 
-    if (
+        if eval_model_name == "Random Forest":
 
-        "eval_model_name" in locals()
+            st.divider()
 
-        and
-
-        eval_model_name == "Random Forest"
-
-    ):
-
-        st.divider()
-
-
-        st.subheader(
-            "Random Forest — Feature Importance"
-        )
-
-
-        try:
-
-            feature_names = (
-
-                eval_pipeline
-
-                .named_steps[
-                    "preprocessor"
-                ]
-
-                .get_feature_names_out()
+            st.subheader(
+                "🌲 Random Forest — Feature Importance"
             )
 
 
-            importances = (
+            try:
 
-                eval_pipeline
+                feature_names = (
 
-                .named_steps[
-                    "classifier"
-                ]
+                    eval_pipeline
 
-                .feature_importances_
-            )
+                    .named_steps[
+                        "preprocessor"
+                    ]
 
+                    .get_feature_names_out()
 
-            importance_df = pd.DataFrame({
-
-                "Feature":
-                    feature_names,
-
-                "Importance":
-                    importances
-
-            })
-
-
-            importance_df = (
-
-                importance_df
-
-                .sort_values(
-
-                    "Importance",
-
-                    ascending=False
                 )
 
-                .head(15)
 
-                .sort_values(
+                importances = (
 
-                    "Importance",
+                    eval_pipeline
 
-                    ascending=True
+                    .named_steps[
+                        "classifier"
+                    ]
+
+                    .feature_importances_
+
                 )
-            )
 
 
-            fig = px.bar(
+                importance_df = pd.DataFrame({
 
-                importance_df,
+                    "Feature":
+                        feature_names,
 
-                x="Importance",
+                    "Importance":
+                        importances
 
-                y="Feature",
-
-                orientation="h",
-
-                title=(
-                    "Top 15 Random Forest "
-                    "Feature Importances"
-                ),
-
-                text="Importance"
-            )
+                })
 
 
-            fig.update_traces(
+                importance_df = (
 
-                texttemplate="%{text:.3f}",
+                    importance_df
 
-                textposition="outside",
+                    .sort_values(
+                        "Importance",
+                        ascending=False
+                    )
 
-                hovertemplate=(
+                    .head(15)
 
-                    "<b>Feature:</b> %{y}<br>"
+                    .sort_values(
+                        "Importance",
+                        ascending=True
+                    )
 
-                    "<b>Importance:</b> %{x:.3f}"
-
-                    "<extra></extra>"
                 )
-            )
 
 
-            fig.update_xaxes(
-                title="Feature Importance"
-            )
+                fig = px.bar(
+
+                    importance_df,
+
+                    x="Importance",
+
+                    y="Feature",
+
+                    orientation="h",
+
+                    title=(
+                        "Top 15 Random Forest "
+                        "Feature Importances"
+                    ),
+
+                    text="Importance"
+
+                )
 
 
-            fig.update_yaxes(
-                title="Feature"
-            )
+                fig.update_traces(
+
+                    texttemplate="%{text:.3f}",
+
+                    textposition="outside"
+
+                )
 
 
-            fig.update_layout(
-                height=600
-            )
+                fig.update_layout(
+                    height=600
+                )
 
 
-            st.plotly_chart(
+                st.plotly_chart(
 
-                fig,
+                    fig,
 
-                use_container_width=True
-            )
+                    use_container_width=True
+
+                )
 
 
-        except Exception as e:
+            except Exception as e:
 
-            st.warning(
-                "Unable to display Random Forest feature importance."
-            )
+                st.warning(
+                    "Unable to display Random Forest feature importance."
+                )
 
-            st.code(
-                str(e)
-            )
+                st.code(
+                    str(e)
+                )
