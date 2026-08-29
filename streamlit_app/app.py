@@ -820,15 +820,60 @@ with tab_performance:
     inner_tab1, inner_tab2 = st.tabs(["Cross-validated (trust this)", "In-sample (for transparency)"])
 
     with inner_tab1:
-        fig, ax = plt.subplots(figsize=(10, 5))
-        comparison_df[["Train_Accuracy_CV", "Test_Accuracy"]].plot(
-            kind="bar", ax=ax, color=["#DD8452", "#4C72B0"]
+        st.subheader("Inner Comparison — Train vs Test Accuracy")
+
+        accuracy_df = (
+            comparison_df[["Train_Accuracy_CV", "Test_Accuracy"]]
+            .reset_index()
+            .rename(columns={"index": "Model"})
         )
-        ax.set_ylim(0, 1.05)
-        ax.set_ylabel("Accuracy")
-        plt.xticks(rotation=20, ha="right")
-        plt.tight_layout()
-        st.pyplot(fig)
+        
+        accuracy_long = accuracy_df.melt(
+            id_vars="Model",
+            var_name="Dataset",
+            value_name="Accuracy"
+        )
+        
+        fig = px.bar(
+            accuracy_long,
+            x="Model",
+            y="Accuracy",
+            color="Dataset",
+            barmode="group",
+            text="Accuracy",
+            title="Train vs Test Accuracy"
+        )
+        
+        fig.update_traces(
+            texttemplate="%{text:.1%}",
+            textposition="outside",
+            hovertemplate=(
+                "<b>Model:</b> %{x}<br>"
+                "<b>Dataset:</b> %{fullData.name}<br>"
+                "<b>Accuracy:</b> %{y:.2%}"
+                "<extra></extra>"
+            )
+        )
+        
+        fig.update_yaxes(
+            range=[0, 1.05],
+            title="Accuracy",
+            tickformat=".0%"
+        )
+        
+        fig.update_xaxes(
+            title="Model"
+        )
+        
+        fig.update_layout(
+            height=500,
+            hovermode="x unified"
+        )
+        
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
         st.caption(
             "Each fold's model is scored on held-out rows of the training data, so this number "
             "cannot trivially reach 1.0 through memorisation — this is the meaningful overfitting "
