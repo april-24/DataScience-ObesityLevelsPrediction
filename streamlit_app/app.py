@@ -1146,8 +1146,8 @@ with tab_explore:
         
                     # Make pie larger
                     domain=dict(
-                        x=[0.08, 0.92],
-                        y=[0.02, 0.75]
+                        x=[0.02, 0.98],
+                        y=[0.05, 0.85]
                     )
                 )
         
@@ -1159,7 +1159,7 @@ with tab_explore:
                         l=0,
                         r=0,
                         t=0,
-                        b=0
+                        b=50
                     ),
         
                     # Legend at bottom
@@ -1170,7 +1170,7 @@ with tab_explore:
                         x=0.5,
                         xanchor="center",
                     
-                        y=-0.12,          # Move legend DOWN
+                        y=-0.20,          # Move legend DOWN
                         yanchor="top",
                     
                         font=dict(
