@@ -512,8 +512,7 @@ with tab_explore:
     
 # OBESITY LEVEL PIE CHART
     with chart1:
-        
-    st.markdown("**Obesity Level Distribution (Interactive Pie Chart)**")
+    st.markdown("**Obesity Level Distribution **")
 
     counts = (
         filtered["Obesity_Level"]
@@ -533,12 +532,17 @@ with tab_explore:
     )
 
     fig.update_traces(
+        textinfo="percent",
         hovertemplate=(
-            "<b>%{label}</b><br>"
-            "Count: %{value}<br>"
-            "Percentage: %{percent}"
+            "<b>Obesity Level:</b> %{label}<br>"
+            "<b>Count:</b> %{value}<br>"
+            "<b>Percentage:</b> %{percent}"
             "<extra></extra>"
         )
+    )
+
+    fig.update_layout(
+        height=500
     )
 
     st.plotly_chart(
