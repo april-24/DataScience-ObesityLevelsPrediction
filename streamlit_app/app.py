@@ -475,48 +475,73 @@ with tab_predict:
 # TAB 3 — DATA EXPLORATION
 # ============================================================
 with tab_explore:
+
     st.header("📊 Data Exploration")
 
     df = load_cleaned_data()
 
-    st.caption(f"Cleaned dataset: {df.shape[0]} rows × {df.shape[1]} columns")
+    st.caption(
+        f"Cleaned dataset: {df.shape[0]} rows × {df.shape[1]} columns"
+    )
 
     # ========================================================
     # DATA PREVIEW
     # ========================================================
-    with st.expander("Preview raw table & summary statistics", expanded=False):
-        st.dataframe(df.head(20), width="stretch")
+
+    with st.expander(
+        "Preview raw table & summary statistics",
+        expanded=False
+    ):
+
+        st.dataframe(
+            df.head(20),
+            width="stretch"
+        )
 
         st.write("Numeric summary:")
-        st.dataframe(df.describe().T, width="stretch")
+
+        st.dataframe(
+            df.describe().T,
+            width="stretch"
+        )
 
     # ========================================================
     # FILTERS
     # ========================================================
-    st.subheader("Filters")
+
+    st.subheader("🔎 Filters")
 
     fc1, fc2, fc3 = st.columns(3)
 
     with fc1:
+
         gender_filter = st.multiselect(
             "Gender",
             sorted(df["Gender"].unique()),
-            default=sorted(df["Gender"].unique())
+            default=sorted(df["Gender"].unique()),
+            key="gender_filter"
         )
 
     with fc2:
+
         level_filter = st.multiselect(
             "Obesity Level",
             obesity_order,
-            default=obesity_order
+            default=obesity_order,
+            key="level_filter"
         )
 
     with fc3:
+
         age_range = st.slider(
             "Age range",
             int(df["Age"].min()),
             int(df["Age"].max()),
-            (int(df["Age"].min()), int(df["Age"].max()))
+            (
+                int(df["Age"].min()),
+                int(df["Age"].max())
+            ),
+            key="age_filter"
         )
 
     filtered = df[
@@ -530,16 +555,161 @@ with tab_explore:
     )
 
     # ========================================================
-    # 1. SCATTERPLOT
+    # NUMERIC OPTIONS
     # ========================================================
+
+    num_options = filtered.select_dtypes(
+        include=np.number
+    ).columns.tolist()
+
+    # ========================================================
+    # 1. PIE CHART
+    # ========================================================
+
     chart1, chart2 = st.columns(2)
 
     with chart1:
-        st.markdown("**Interactive Scatterplot**")
 
-        num_options = filtered.select_dtypes(
-            include=np.number
-        ).columns.tolist()
+        st.markdown("### 🍩 Obesity Level Distribution")
+
+        counts = (
+            filtered["Obesity_Level"]
+            .value_counts()
+            .reindex(obesity_order)
+            .fillna(0)
+            .reset_index()
+        )
+
+        counts.columns = [
+            "Obesity_Level",
+            "Count"
+        ]
+
+        # Remove zero-count categories
+        counts = counts[counts["Count"] > 0]
+
+        fig = px.pie(
+            counts,
+            names="Obesity_Level",
+            values="Count",
+            title="Obesity Level Distribution",
+            color="Obesity_Level",
+            color_discrete_map=OBESITY_COLORS,
+            category_orders={
+                "Obesity_Level": obesity_order
+            },
+            hole=0.35
+        )
+
+        fig.update_traces(
+            textinfo="percent",
+            textposition="inside",
+            hovertemplate=(
+                "<b>Obesity Level:</b> %{label}<br>"
+                "<b>Count:</b> %{value}<br>"
+                "<b>Percentage:</b> %{percent}"
+                "<extra></extra>"
+            )
+        )
+
+        fig.update_layout(
+            height=500,
+            legend=dict(
+                title="Obesity Level",
+                traceorder="normal"
+            )
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+    # ========================================================
+    # 2. CLEAR HISTOGRAM
+    # ========================================================
+
+    with chart2:
+
+        st.markdown("### 📊 Numeric Distribution")
+
+        hist_col = st.selectbox(
+            "Choose a numeric variable",
+            num_options,
+            index=(
+                num_options.index("BMI")
+                if "BMI" in num_options
+                else 0
+            ),
+            key="hist_col"
+        )
+
+        # Number of bins can be controlled by user
+        hist_bins = st.slider(
+            "Number of bins",
+            min_value=5,
+            max_value=40,
+            value=15,
+            step=5,
+            key="hist_bins"
+        )
+
+        fig = px.histogram(
+            filtered,
+            x=hist_col,
+            color="Obesity_Level",
+            nbins=hist_bins,
+            barmode="overlay",
+            opacity=0.65,
+            category_orders={
+                "Obesity_Level": obesity_order
+            },
+            color_discrete_map=OBESITY_COLORS,
+            title=f"Distribution of {hist_col}"
+        )
+
+        fig.update_traces(
+            hovertemplate=(
+                f"<b>{hist_col}:</b> %{{x}}<br>"
+                "<b>Count:</b> %{y}<br>"
+                "<b>Obesity Level:</b> %{fullData.name}"
+                "<extra></extra>"
+            )
+        )
+
+        fig.update_layout(
+            height=500,
+            xaxis_title=hist_col,
+            yaxis_title="Number of Records",
+            legend=dict(
+                title="Obesity Level",
+                traceorder="normal"
+            ),
+            bargap=0.05,
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        st.caption(
+            "💡 Use the dropdown to compare the distribution of different "
+            "numeric variables. Increase the number of bins for more detail."
+        )
+
+    # ========================================================
+    # 3. SCATTERPLOT
+    # ========================================================
+
+    st.divider()
+
+    chart3, chart4 = st.columns(2)
+
+    with chart3:
+
+        st.markdown("### 🔵 Interactive Scatterplot")
 
         sx = st.selectbox(
             "X-axis",
@@ -558,7 +728,7 @@ with tab_explore:
             index=(
                 num_options.index("Weight")
                 if "Weight" in num_options
-                else 1
+                else min(1, len(num_options) - 1)
             ),
             key="scatter_y"
         )
@@ -571,6 +741,7 @@ with tab_explore:
             category_orders={
                 "Obesity_Level": obesity_order
             },
+            color_discrete_map=OBESITY_COLORS,
             hover_data=[
                 "Gender",
                 "Age",
@@ -589,19 +760,29 @@ with tab_explore:
             )
         )
 
+        fig.update_layout(
+            height=550,
+            legend=dict(
+                title="Obesity Level",
+                traceorder="normal"
+            )
+        )
+
         st.plotly_chart(
             fig,
             use_container_width=True
         )
 
     # ========================================================
-    # 2. BOXPLOT
+    # 4. BOXPLOT
     # ========================================================
-    with chart2:
-        st.markdown("**Interactive Boxplot by Obesity Level**")
+
+    with chart4:
+
+        st.markdown("### 📦 Interactive Boxplot")
 
         box_col = st.selectbox(
-            "Numeric column",
+            "Numeric variable",
             num_options,
             index=(
                 num_options.index("Weight")
@@ -619,6 +800,7 @@ with tab_explore:
             category_orders={
                 "Obesity_Level": obesity_order
             },
+            color_discrete_map=OBESITY_COLORS,
             points="outliers",
             title=f"{box_col} by Obesity Level"
         )
@@ -632,6 +814,7 @@ with tab_explore:
         )
 
         fig.update_layout(
+            height=550,
             xaxis_tickangle=-45,
             showlegend=False
         )
@@ -642,9 +825,12 @@ with tab_explore:
         )
 
     # ========================================================
-    # 3. CORRELATION HEATMAP
+    # 5. CORRELATION HEATMAP
     # ========================================================
-    st.subheader("Interactive Correlation Heatmap")
+
+    st.divider()
+
+    st.subheader("🔥 Interactive Correlation Heatmap")
 
     numeric_data = filtered.select_dtypes(
         include=np.number
@@ -656,7 +842,7 @@ with tab_explore:
         corr,
         text_auto=".2f",
         aspect="auto",
-        title="Correlation Heatmap"
+        title="Correlation Between Numeric Variables"
     )
 
     fig.update_traces(
@@ -668,15 +854,25 @@ with tab_explore:
         )
     )
 
+    fig.update_layout(
+        height=650
+    )
+
     st.plotly_chart(
         fig,
         use_container_width=True
     )
 
     # ========================================================
-    # 4. OLAP PIVOT EXPLORER
+    # 6. OLAP PIVOT EXPLORER
     # ========================================================
-    st.subheader("OLAP-style Pivot Explorer")
+
+    st.divider()
+
+    st.subheader(
+        "📋 OLAP-style Pivot Explorer"
+    )
+
     st.caption(
         "Build your own multidimensional summary table by choosing "
         "row and column dimensions, a numeric measure, and an aggregation."
@@ -689,6 +885,7 @@ with tab_explore:
     p1, p2, p3, p4 = st.columns(4)
 
     with p1:
+
         row_dim = st.selectbox(
             "Row dimension",
             categorical_options,
@@ -696,10 +893,12 @@ with tab_explore:
                 categorical_options.index("Gender")
                 if "Gender" in categorical_options
                 else 0
-            )
+            ),
+            key="row_dimension"
         )
 
     with p2:
+
         col_dim = st.selectbox(
             "Column dimension",
             categorical_options,
@@ -707,10 +906,12 @@ with tab_explore:
                 categorical_options.index("Obesity_Level")
                 if "Obesity_Level" in categorical_options
                 else 0
-            )
+            ),
+            key="column_dimension"
         )
 
     with p3:
+
         measure = st.selectbox(
             "Measure",
             num_options,
@@ -718,13 +919,21 @@ with tab_explore:
                 num_options.index("BMI")
                 if "BMI" in num_options
                 else 0
-            )
+            ),
+            key="pivot_measure"
         )
 
     with p4:
+
         agg_func = st.selectbox(
             "Aggregation",
-            ["mean", "count", "sum", "median"]
+            [
+                "mean",
+                "count",
+                "sum",
+                "median"
+            ],
+            key="pivot_aggregation"
         )
 
     if row_dim != col_dim:
@@ -745,90 +954,10 @@ with tab_explore:
         )
 
     else:
+
         st.warning(
             "Choose two different dimensions for rows and columns."
         )
-
-    # ========================================================
-    # 5. PIE CHART
-    # ========================================================
-    st.subheader("Obesity Level Distribution")
-
-    counts = (
-        filtered["Obesity_Level"]
-        .value_counts()
-        .reindex(obesity_order)
-        .dropna()
-        .reset_index()
-    )
-
-    counts.columns = ["Obesity_Level", "Count"]
-
-    fig = px.pie(
-        counts,
-        names="Obesity_Level",
-        values="Count",
-        title="Obesity Level Distribution"
-    )
-
-    fig.update_traces(
-        textinfo="percent",
-        hovertemplate=(
-            "<b>Obesity Level:</b> %{label}<br>"
-            "<b>Count:</b> %{value}<br>"
-            "<b>Percentage:</b> %{percent}"
-            "<extra></extra>"
-        )
-    )
-
-    fig.update_layout(
-        height=500
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-    # ========================================================
-    # 6. HISTOGRAM
-    # ========================================================
-    st.subheader("Interactive Numeric Distribution")
-
-    hist_col = st.selectbox(
-        "Choose a numeric column",
-        num_options,
-        index=(
-            num_options.index("BMI")
-            if "BMI" in num_options
-            else 0
-        ),
-        key="hist_col"
-    )
-
-    fig = px.histogram(
-        filtered,
-        x=hist_col,
-        color="Obesity_Level",
-        category_orders={
-            "Obesity_Level": obesity_order
-        },
-        nbins=20,
-        title=f"Distribution of {hist_col}"
-    )
-
-    fig.update_traces(
-        hovertemplate=(
-            f"<b>{hist_col}</b>: %{{x}}<br>"
-            "Count: %{y}"
-            "<extra></extra>"
-        )
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
 
 # ============================================================
 # TAB 4 — MODEL PERFORMANCE
