@@ -636,78 +636,105 @@ with tab_explore:
         )
 
     # ========================================================
-    # 2. CLEAR HISTOGRAM
-    # ========================================================
+# 2. CLEAR HISTOGRAM
+# ========================================================
 
-    with chart2:
+with chart2:
 
-        st.markdown("### 📊 Numeric Distribution")
+    st.markdown("### 📊 Numeric Distribution")
 
-        hist_col = st.selectbox(
-            "Choose a numeric variable",
-            num_options,
-            index=(
-                num_options.index("BMI")
-                if "BMI" in num_options
-                else 0
-            ),
-            key="hist_col"
+    hist_col = st.selectbox(
+        "Choose a numeric variable",
+        num_options,
+        index=(
+            num_options.index("BMI")
+            if "BMI" in num_options
+            else 0
+        ),
+        key="hist_col"
+    )
+
+    # Number of bins
+    hist_bins = st.slider(
+        "Number of bins",
+        min_value=5,
+        max_value=40,
+        value=15,
+        step=5,
+        key="hist_bins"
+    )
+
+    # ----------------------------------------------------
+    # HISTOGRAM
+    # ----------------------------------------------------
+    fig = px.histogram(
+        filtered,
+        x=hist_col,
+        color="Obesity_Level",
+        nbins=hist_bins,
+
+        # STACKED = much clearer than overlay
+        barmode="stack",
+
+        category_orders={
+            "Obesity_Level": obesity_order
+        },
+
+        color_discrete_map=OBESITY_COLORS,
+
+        title=f"Distribution of {hist_col}"
+    )
+
+    # ----------------------------------------------------
+    # HOVER
+    # ----------------------------------------------------
+    fig.update_traces(
+        hovertemplate=(
+            f"<b>{hist_col}:</b> %{{x}}<br>"
+            "<b>Number of Records:</b> %{y}<br>"
+            "<b>Obesity Level:</b> %{fullData.name}"
+            "<extra></extra>"
         )
+    )
 
-        # Number of bins can be controlled by user
-        hist_bins = st.slider(
-            "Number of bins",
-            min_value=5,
-            max_value=40,
-            value=15,
-            step=5,
-            key="hist_bins"
-        )
+    # ----------------------------------------------------
+    # LAYOUT
+    # ----------------------------------------------------
+    fig.update_layout(
+        height=520,
 
-        fig = px.histogram(
-            filtered,
-            x=hist_col,
-            color="Obesity_Level",
-            nbins=hist_bins,
-            barmode="overlay",
-            opacity=0.65,
-            category_orders={
-                "Obesity_Level": obesity_order
-            },
-            color_discrete_map=OBESITY_COLORS,
-            title=f"Distribution of {hist_col}"
-        )
+        xaxis=dict(
+            title=hist_col,
+            showgrid=False
+        ),
 
-        fig.update_traces(
-            hovertemplate=(
-                f"<b>{hist_col}:</b> %{{x}}<br>"
-                "<b>Count:</b> %{y}<br>"
-                "<b>Obesity Level:</b> %{fullData.name}"
-                "<extra></extra>"
-            )
-        )
+        yaxis=dict(
+            title="Number of Records",
+            showgrid=True
+        ),
 
-        fig.update_layout(
-            height=500,
-            xaxis_title=hist_col,
-            yaxis_title="Number of Records",
-            legend=dict(
-                title="Obesity Level",
-                traceorder="normal"
-            ),
-            bargap=0.05,
-            hovermode="x unified"
-        )
+        legend=dict(
+            title="Obesity Level",
+            traceorder="normal",
+            orientation="v"
+        ),
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+        bargap=0.08,
 
-        st.caption(
-            "💡 Use the dropdown to compare the distribution of different "
-            "numeric variables. Increase the number of bins for more detail."
-        )
+        # Avoid the confusing unified hover
+        hovermode="closest"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    st.caption(
+        "💡 The histogram shows the distribution of the selected "
+        "numeric variable across obesity levels. Use the bin slider "
+        "to control the level of detail."
+    )
 
     # ========================================================
     # 3. SCATTERPLOT
