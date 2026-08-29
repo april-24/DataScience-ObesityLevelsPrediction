@@ -1078,95 +1078,171 @@ with tab_performance:
             use_container_width=True
         )
 
-    with roc_col:
+        with roc_col:
         st.markdown("**Per-class ROC Curves**")
+
         if hasattr(eval_pipeline, "predict_proba"):
 
-    y_proba = eval_pipeline.predict_proba(X_test)
+            y_proba = eval_pipeline.predict_proba(X_test)
 
-    y_test_bin = label_binarize(
-        y_test,
-        classes=list(range(len(label_encoder.classes_)))
-    )
+            y_test_bin = label_binarize(
+                y_test,
+                classes=list(range(len(label_encoder.classes_)))
+            )
 
-    roc_rows = []
+            roc_rows = []
 
-    for i, class_name in enumerate(label_encoder.classes_):
+            for i, class_name in enumerate(label_encoder.classes_):
 
-        fpr, tpr, _ = roc_curve(
-            y_test_bin[:, i],
-            y_proba[:, i]
-        )
+                fpr, tpr, _ = roc_curve(
+                    y_test_bin[:, i],
+                    y_proba[:, i]
+                )
 
-        roc_auc_i = auc(fpr, tpr)
+                roc_auc_i = auc(fpr, tpr)
 
-        for x, y in zip(fpr, tpr):
-            roc_rows.append({
-                "False Positive Rate": x,
-                "True Positive Rate": y,
-                "Obesity Level": class_name,
-                "AUC": roc_auc_i
-            })
+                for x, y in zip(fpr, tpr):
+                    roc_rows.append({
+                        "False Positive Rate": x,
+                        "True Positive Rate": y,
+                        "Obesity Level": class_name,
+                        "AUC": roc_auc_i
+                    })
 
-    roc_df = pd.DataFrame(roc_rows)
+            roc_df = pd.DataFrame(roc_rows)
 
-    fig = px.line(
-        roc_df,
-        x="False Positive Rate",
-        y="True Positive Rate",
-        color="Obesity Level",
-        title=f"Per-class ROC Curves — {eval_model_name}",
-        hover_data=["AUC"]
-    )
+            fig = px.line(
+                roc_df,
+                x="False Positive Rate",
+                y="True Positive Rate",
+                color="Obesity Level",
+                title=f"Per-class ROC Curves — {eval_model_name}",
+                hover_data=["AUC"]
+            )
 
-    fig.add_scatter(
-        x=[0, 1],
-        y=[0, 1],
-        mode="lines",
-        name="Random Classifier",
-        line=dict(dash="dot")
-    )
+            # Random classifier reference line
+            fig.add_scatter(
+                x=[0, 1],
+                y=[0, 1],
+                mode="lines",
+                name="Random Classifier",
+                line=dict(dash="dot")
+            )
 
-    fig.update_xaxes(
-        range=[0, 1],
-        title="False Positive Rate"
-    )
+            fig.update_xaxes(
+                range=[0, 1],
+                title="False Positive Rate"
+            )
 
-    fig.update_yaxes(
-        range=[0, 1],
-        title="True Positive Rate"
-    )
+            fig.update_yaxes(
+                range=[0, 1],
+                title="True Positive Rate"
+            )
 
-    fig.update_layout(
-        height=550,
-        hovermode="closest"
-    )
+            fig.update_layout(
+                height=550,
+                hovermode="closest"
+            )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
         else:
-            st.info("This model does not expose class probabilities for ROC curves.")
+            st.info(
+                "This model does not expose class probabilities for ROC curves."
+            )
+
 
     with st.expander("Full classification report"):
+
         report = classification_report(
-            y_test, y_pred, target_names=label_encoder.classes_,
-            zero_division=0, output_dict=True,
+            y_test,
+            y_pred,
+            target_names=label_encoder.classes_,
+            zero_division=0,
+            output_dict=True,
         )
-        st.dataframe(pd.DataFrame(report).T.round(3), width='stretch')
+
+        st.dataframe(
+            pd.DataFrame(report).T.round(3),
+            width="stretch"
+        )
+
+
+    # ========================================================
+    # RANDOM FOREST — FEATURE IMPORTANCE
+    # ========================================================
 
     if eval_model_name == "Random Forest":
+
         st.subheader("Random Forest — Feature Importance")
-        feature_names = eval_pipeline.named_steps["preprocessor"].get_feature_names_out()
-        importances = eval_pipeline.named_steps["classifier"].feature_importances_
+
+        feature_names = (
+            eval_pipeline
+            .named_steps["preprocessor"]
+            .get_feature_names_out()
+        )
+
+        importances = (
+            eval_pipeline
+            .named_steps["classifier"]
+            .feature_importances_
+        )
+
         importance_df = pd.DataFrame({
-            "Feature": feature_names, "Importance": importances
-        }).sort_values("Importance", ascending=False).head(15)
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.barplot(data=importance_df, x="Importance", y="Feature", color="#55A868", ax=ax)
-        plt.tight_layout()
-        st.pyplot(fig)
+            "Feature": feature_names,
+            "Importance": importances
+        })
+
+        importance_df = (
+            importance_df
+            .sort_values("Importance", ascending=False)
+            .head(15)
+            .sort_values("Importance", ascending=True)
+        )
+
+        fig = px.bar(
+            importance_df,
+            x="Importance",
+            y="Feature",
+            orientation="h",
+            title="Top 15 Random Forest Feature Importances",
+            text="Importance"
+        )
+
+        fig.update_traces(
+            texttemplate="%{text:.3f}",
+            textposition="outside",
+            hovertemplate=(
+                "<b>Feature:</b> %{y}<br>"
+                "<b>Importance:</b> %{x:.3f}"
+                "<extra></extra>"
+            )
+        )
+
+        fig.update_xaxes(
+            title="Feature Importance"
+        )
+
+        fig.update_yaxes(
+            title="Feature"
+        )
+
+        fig.update_layout(
+            height=600
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
 
 st.divider()
-st.caption("BMDS2003 Data Science — Group Project | CRISP-DM Prototype | Built with Streamlit")
+
+st.caption(
+    "BMDS2003 Data Science — Group Project | "
+    "CRISP-DM Prototype | Built with Streamlit"
+)
