@@ -635,7 +635,7 @@ with tab_explore:
             use_container_width=True
         )
 
-    # ========================================================
+# ========================================================
 # 2. CLEAR HISTOGRAM
 # ========================================================
 
@@ -664,64 +664,98 @@ with chart2:
         key="hist_bins"
     )
 
+    with chart2:
+
+    st.markdown("### 📊 Numeric Distribution")
+
+    hist_col = st.selectbox(
+        "Choose a numeric variable",
+        num_options,
+        index=(
+            num_options.index("BMI")
+            if "BMI" in num_options
+            else 0
+        ),
+        key="hist_col"
+    )
+
+    # Number of bins
+    hist_bins = st.slider(
+        "Number of bins",
+        min_value=5,
+        max_value=30,
+        value=15,
+        step=5,
+        key="hist_bins"
+    )
+
     # ----------------------------------------------------
-    # HISTOGRAM
+    # HISTOGRAM — SEPARATE PANELS
     # ----------------------------------------------------
+
     fig = px.histogram(
         filtered,
         x=hist_col,
-        color="Obesity_Level",
+        facet_col="Obesity_Level",
+        facet_col_wrap=2,
         nbins=hist_bins,
-
-        # STACKED = much clearer than overlay
-        barmode="stack",
 
         category_orders={
             "Obesity_Level": obesity_order
         },
 
+        color="Obesity_Level",
         color_discrete_map=OBESITY_COLORS,
 
-        title=f"Distribution of {hist_col}"
+        title=f"Distribution of {hist_col} by Obesity Level"
     )
 
     # ----------------------------------------------------
-    # HOVER
+    # CLEAN UP
     # ----------------------------------------------------
+
     fig.update_traces(
+        marker_line_width=0,
         hovertemplate=(
             f"<b>{hist_col}:</b> %{{x}}<br>"
-            "<b>Number of Records:</b> %{y}<br>"
-            "<b>Obesity Level:</b> %{fullData.name}"
+            "<b>Count:</b> %{y}"
             "<extra></extra>"
         )
     )
 
-    # ----------------------------------------------------
-    # LAYOUT
-    # ----------------------------------------------------
+    # Remove repeated facet labels
+    fig.for_each_annotation(
+        lambda a: a.update(
+            text=a.text.split("=")[-1]
+        )
+    )
+
+    # Make all panels use the same x-axis range
+    fig.update_xaxes(
+        matches="x",
+        showgrid=False,
+        title_text=hist_col
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        title_text="Number of Records"
+    )
+
     fig.update_layout(
-        height=520,
-
-        xaxis=dict(
-            title=hist_col,
-            showgrid=False
-        ),
-
-        yaxis=dict(
-            title="Number of Records",
-            showgrid=True
-        ),
-
-        legend=dict(
-            title="Obesity Level",
-            traceorder="normal",
-            orientation="v"
-        ),
-
+        height=850,
         bargap=0.08,
 
-        # Avoid the confusing unified hover
+        # Hide legend because each panel already has its title
+        showlegend=False,
+
+        margin=dict(
+            l=60,
+            r=30,
+            t=80,
+            b=60
+        ),
+
         hovermode="closest"
     )
 
@@ -731,9 +765,9 @@ with chart2:
     )
 
     st.caption(
-        "💡 The histogram shows the distribution of the selected "
-        "numeric variable across obesity levels. Use the bin slider "
-        "to control the level of detail."
+        "💡 Each panel represents one obesity level, making it easier "
+        "to compare the distribution of the selected numeric variable "
+        "without overlapping categories."
     )
 
     # ========================================================
