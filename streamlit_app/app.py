@@ -509,57 +509,220 @@ with tab_explore:
     st.caption(f"Showing {len(filtered)} of {len(df)} records after filtering.")
 
     chart1, chart2 = st.columns(2)
-
+    
+# OBESITY LEVEL PIE CHART
     with chart1:
-        st.markdown("**Obesity Level Distribution (Pie Chart)**")
-        counts = filtered["Obesity_Level"].value_counts().reindex(obesity_order).dropna()
-        fig, ax = plt.subplots(figsize=(5.5, 5.5))
-        ax.pie(counts, labels=counts.index, autopct="%1.1f%%", startangle=90,
-               colors=sns.color_palette("YlOrRd", n_colors=len(counts)))
-        ax.axis("equal")
-        st.pyplot(fig)
+    st.markdown("**Obesity Level Distribution (Interactive Pie Chart)**")
 
-    with chart2:
-        st.markdown("**Numeric Distribution (Histogram)**")
-        numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
-        hist_col = st.selectbox("Choose a numeric column", numeric_cols, index=numeric_cols.index("BMI") if "BMI" in numeric_cols else 0)
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.histplot(data=filtered, x=hist_col, bins=20, kde=True, ax=ax, color="#4C72B0")
-        ax.set_title(f"Distribution of {hist_col}")
-        st.pyplot(fig)
+    counts = (
+        filtered["Obesity_Level"]
+        .value_counts()
+        .reindex(obesity_order)
+        .dropna()
+        .reset_index()
+    )
 
-    chart3, chart4 = st.columns(2)
+    counts.columns = ["Obesity_Level", "Count"]
 
-    with chart3:
-        st.markdown("**Scatterplot**")
-        num_options = filtered.select_dtypes(include=np.number).columns.tolist()
-        sx = st.selectbox("X-axis", num_options, index=num_options.index("Height") if "Height" in num_options else 0, key="sx")
-        sy = st.selectbox("Y-axis", num_options, index=num_options.index("Weight") if "Weight" in num_options else 1, key="sy")
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.scatterplot(
-            data=filtered, x=sx, y=sy, hue="Obesity_Level", hue_order=obesity_order,
-            palette=sns.color_palette("YlOrRd", n_colors=len(obesity_order)), alpha=0.75, ax=ax
+    fig = px.pie(
+        counts,
+        names="Obesity_Level",
+        values="Count",
+        title="Obesity Level Distribution"
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "Count: %{value}<br>"
+            "Percentage: %{percent}"
+            "<extra></extra>"
         )
-        ax.legend(fontsize=7, bbox_to_anchor=(1.02, 1), loc="upper left")
-        st.pyplot(fig)
+    )
 
-    with chart4:
-        st.markdown("**Boxplot by Obesity Level**")
-        box_col = st.selectbox("Numeric column", num_options, index=num_options.index("Weight") if "Weight" in num_options else 0, key="box")
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.boxplot(
-            data=filtered, x="Obesity_Level", y=box_col, order=obesity_order,
-            hue="Obesity_Level", hue_order=obesity_order, legend=False,
-            palette=sns.color_palette("YlOrRd", n_colors=len(obesity_order)), ax=ax
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+# HISTOGRAM
+
+with chart2:
+    st.markdown("**Numeric Distribution (Interactive Histogram)**")
+
+    numeric_cols = filtered.select_dtypes(
+        include=np.number
+    ).columns.tolist()
+
+    hist_col = st.selectbox(
+        "Choose a numeric column",
+        numeric_cols,
+        index=(
+            numeric_cols.index("BMI")
+            if "BMI" in numeric_cols
+            else 0
+        ),
+        key="hist_col"
+    )
+
+    fig = px.histogram(
+        filtered,
+        x=hist_col,
+        color="Obesity_Level",
+        category_orders={
+            "Obesity_Level": obesity_order
+        },
+        nbins=20,
+        title=f"Distribution of {hist_col}"
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            f"<b>{hist_col}</b>: %{{x}}<br>"
+            "Count: %{y}"
+            "<extra></extra>"
         )
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")        
-        st.pyplot(fig)
+    )
 
-    st.subheader("Correlation Heatmap")
-    numeric_data = filtered.select_dtypes(include=np.number)
-    fig, ax = plt.subplots(figsize=(9, 6))
-    sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax)
-    st.pyplot(fig)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+# CHART 3 — SCATTERPLOT
+chart3, chart4 = st.columns(2)
+
+with chart3:
+    st.markdown("**Interactive Scatterplot**")
+
+    num_options = filtered.select_dtypes(
+        include=np.number
+    ).columns.tolist()
+
+    sx = st.selectbox(
+        "X-axis",
+        num_options,
+        index=(
+            num_options.index("Height")
+            if "Height" in num_options
+            else 0
+        ),
+        key="scatter_x"
+    )
+
+    sy = st.selectbox(
+        "Y-axis",
+        num_options,
+        index=(
+            num_options.index("Weight")
+            if "Weight" in num_options
+            else 1
+        ),
+        key="scatter_y"
+    )
+
+    fig = px.scatter(
+        filtered,
+        x=sx,
+        y=sy,
+        color="Obesity_Level",
+        category_orders={
+            "Obesity_Level": obesity_order
+        },
+        hover_data=[
+            "Gender",
+            "Age",
+            "Height",
+            "Weight",
+            "BMI",
+            "Obesity_Level"
+        ],
+        title=f"{sy} vs {sx}"
+    )
+
+    fig.update_traces(
+        marker=dict(
+            size=8,
+            opacity=0.75
+        )
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+#  BOXPLOT
+
+with chart4:
+    st.markdown("**Interactive Boxplot by Obesity Level**")
+
+    box_col = st.selectbox(
+        "Numeric column",
+        num_options,
+        index=(
+            num_options.index("Weight")
+            if "Weight" in num_options
+            else 0
+        ),
+        key="box_col"
+    )
+
+    fig = px.box(
+        filtered,
+        x="Obesity_Level",
+        y=box_col,
+        color="Obesity_Level",
+        category_orders={
+            "Obesity_Level": obesity_order
+        },
+        points="outliers",
+        title=f"{box_col} by Obesity Level"
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            "<b>Obesity Level:</b> %{x}<br>"
+            f"<b>{box_col}:</b> %{{y}}"
+            "<extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        xaxis_tickangle=-45,
+        showlegend=False
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+# CORRELATION HEATMAP
+
+st.subheader("Interactive Correlation Heatmap")
+numeric_data = filtered.select_dtypes(
+    include=np.number
+)
+corr = numeric_data.corr()
+fig = px.imshow(
+    corr,
+    text_auto=".2f",
+    aspect="auto",
+    title="Correlation Heatmap"
+)
+fig.update_traces(
+    hovertemplate=(
+        "<b>Feature X:</b> %{x}<br>"
+        "<b>Feature Y:</b> %{y}<br>"
+        "<b>Correlation:</b> %{z:.2f}"
+        "<extra></extra>"
+    )
+)
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
 
     st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
     st.caption(
