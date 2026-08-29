@@ -773,13 +773,48 @@ with tab_performance:
 
     st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
     outer_metrics = ["Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted"]
-    fig, ax = plt.subplots(figsize=(10, 5))
-    comparison_df[outer_metrics].plot(kind="bar", ax=ax, colormap="viridis")
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Score")
-    plt.xticks(rotation=20, ha="right")
-    plt.tight_layout()
-    st.pyplot(fig)
+    outer_plot_df = (
+    comparison_df[outer_metrics]
+    .reset_index()
+    .rename(columns={"index": "Model"})
+)
+    outer_long = outer_plot_df.melt(
+    id_vars="Model",
+    var_name="Metric",
+    value_name="Score"
+)
+
+    fig = px.bar(
+        outer_long,
+        x="Model",
+        y="Score",
+        color="Metric",
+        barmode="group",
+        title="Model Performance Comparison"
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            "<b>Model:</b> %{x}<br>"
+            "<b>Metric:</b> %{fullData.name}<br>"
+            "<b>Score:</b> %{y:.2%}"
+            "<extra></extra>"
+        )
+    )
+
+    fig.update_yaxes(
+        range=[0, 1.05],
+        title="Score"
+    )
+
+    fig.update_layout(
+        height=500
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
     st.subheader("Inner Comparison — Train vs Test Accuracy (Overfitting Check)")
     inner_tab1, inner_tab2 = st.tabs(["Cross-validated (trust this)", "In-sample (for transparency)"])
