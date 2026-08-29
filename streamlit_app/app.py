@@ -35,20 +35,6 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import label_binarize
 
-#test
-test_fig = go.Figure(
-    data=[
-        go.Bar(
-            x=["Test"],
-            y=[1]
-        )
-    ]
-)
-
-st.plotly_chart(test_fig, use_container_width=True)
-
-
-
 # ============================================================
 # PAGE CONFIG (must be the first Streamlit call)
 # ============================================================
@@ -446,16 +432,42 @@ with tab_predict:
                     "Probability": proba,
                 }).set_index("Obesity_Level").reindex(obesity_order)
 
-                fig, ax = plt.subplots(figsize=(7, 4.5))
-                colors = ["#C44E52" if lvl == pred_label else "#4C72B0" for lvl in proba_df.index]
-                ax.barh(proba_df.index, proba_df["Probability"], color=colors)
-                ax.set_xlabel("Predicted Probability")
-                ax.set_title(f"Class Probabilities — {chosen_model_name}")
-                ax.set_xlim(0, 1)
-                for i, v in enumerate(proba_df["Probability"]):
-                    ax.text(v + 0.01, i, f"{v:.1%}", va="center", fontsize=9)
-                plt.tight_layout()
-                st.pyplot(fig)
+                fig = px.bar(
+    proba_df.reset_index(),
+    x="Probability",
+    y="Obesity_Level",
+    orientation="h",
+    title=f"Class Probabilities — {chosen_model_name}",
+    text="Probability"
+)
+
+fig.update_traces(
+    texttemplate="%{x:.1%}",
+    textposition="outside",
+    hovertemplate=(
+        "<b>Obesity Level:</b> %{y}<br>"
+        "<b>Probability:</b> %{x:.2%}"
+        "<extra></extra>"
+    )
+)
+
+fig.update_xaxes(
+    range=[0, 1],
+    title="Predicted Probability"
+)
+
+fig.update_yaxes(
+    title="Obesity Level"
+)
+
+fig.update_layout(
+    height=450
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
             else:
                 st.info("This model does not expose class probabilities.")
 
