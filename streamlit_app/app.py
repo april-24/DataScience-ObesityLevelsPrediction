@@ -774,30 +774,41 @@ with tab_predict:
         # ====================================================
         # PREDICTION RESULT
         # ====================================================
-
-        st.image(
-            "assets/bmi_obesity_gauge.png",
-            width=280
-        )
-    
-        st.metric(
-            "Computed BMI",
-            f"{bmi_value:.1f} kg/m²"
-        )
-    
-        st.caption(
-            f"Model used: **{chosen_model_name}**"
-        )
-    
-        st.markdown("**Recommendation:**")
-    
-        st.write(
-            RECOMMENDATIONS.get(
-                pred_label,
-                "Consult a healthcare professional for guidance."
+        with result_col:
+        
+            st.subheader("🎯 Prediction Result")
+        
+            st.metric(
+                "Predicted Obesity Level",
+                pred_label.replace("_", " ")
             )
-        )
-
+        
+            # ----------------------------------------------------
+            # BMI / OBESITY GAUGE IMAGE
+            # ----------------------------------------------------
+        
+            st.image(
+                "assets/bmi_obesity_gauge.png",
+                width=280
+            )
+        
+            st.metric(
+                "Computed BMI",
+                f"{bmi_value:.1f} kg/m²"
+            )
+        
+            st.caption(
+                f"Model used: **{chosen_model_name}**"
+            )
+        
+            st.markdown("**Recommendation:**")
+        
+            st.write(
+                RECOMMENDATIONS.get(
+                    pred_label,
+                    "Consult a healthcare professional for guidance."
+                )
+            )
         # ====================================================
         # CLASS PROBABILITY CHART
         # ====================================================
