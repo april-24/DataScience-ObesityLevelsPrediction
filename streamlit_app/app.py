@@ -1292,121 +1292,121 @@ with tab_explore:
     chart3, chart4 = st.columns(2)
 
     with chart3:
-
-        st.markdown("### 🔵 Interactive Scatterplot")
-
-        sx = st.selectbox(
-            "X-axis",
-            num_options,
-            index=(
-                num_options.index("Height")
-                if "Height" in num_options
-                else 0
-            ),
-            key="scatter_x"
-        )
-
-        sy = st.selectbox(
-            "Y-axis",
-            num_options,
-            index=(
-                num_options.index("Weight")
-                if "Weight" in num_options
-                else min(1, len(num_options) - 1)
-            ),
-            key="scatter_y"
-        )
-
-        fig = px.scatter(
-            filtered,
-            x=sx,
-            y=sy,
-            color="Obesity_Level",
-            category_orders={
-                "Obesity_Level": obesity_order
-            },
-            color_discrete_map=OBESITY_COLORS,
-            hover_data=[
-                "Gender",
-                "Age",
-                "Height",
-                "Weight",
-                "BMI",
-                "Obesity_Level"
-            ],
-            title=f"{sy} vs {sx}"
-        )
-
-        fig.update_traces(
-            marker=dict(
-                size=8,
-                opacity=0.75
+        with st.container(height=700, border=True):
+            st.markdown("### 🔵 Interactive Scatterplot")
+    
+            sx = st.selectbox(
+                "X-axis",
+                num_options,
+                index=(
+                    num_options.index("Height")
+                    if "Height" in num_options
+                    else 0
+                ),
+                key="scatter_x"
             )
-        )
-
-        fig.update_layout(
-            height=550,
-            legend=dict(
-                title="Obesity Level",
-                traceorder="normal"
+    
+            sy = st.selectbox(
+                "Y-axis",
+                num_options,
+                index=(
+                    num_options.index("Weight")
+                    if "Weight" in num_options
+                    else min(1, len(num_options) - 1)
+                ),
+                key="scatter_y"
             )
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+    
+            fig = px.scatter(
+                filtered,
+                x=sx,
+                y=sy,
+                color="Obesity_Level",
+                category_orders={
+                    "Obesity_Level": obesity_order
+                },
+                color_discrete_map=OBESITY_COLORS,
+                hover_data=[
+                    "Gender",
+                    "Age",
+                    "Height",
+                    "Weight",
+                    "BMI",
+                    "Obesity_Level"
+                ],
+                title=f"{sy} vs {sx}"
+            )
+    
+            fig.update_traces(
+                marker=dict(
+                    size=8,
+                    opacity=0.75
+                )
+            )
+    
+            fig.update_layout(
+                height=550,
+                legend=dict(
+                    title="Obesity Level",
+                    traceorder="normal"
+                )
+            )
+    
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
     # ========================================================
     # 4. BOXPLOT
     # ========================================================
-
+    
     with chart4:
-
-        st.markdown("### 📦 Interactive Boxplot")
-
-        box_col = st.selectbox(
-            "Numeric variable",
-            num_options,
-            index=(
-                num_options.index("Weight")
-                if "Weight" in num_options
-                else 0
-            ),
-            key="box_col"
-        )
-
-        fig = px.box(
-            filtered,
-            x="Obesity_Level",
-            y=box_col,
-            color="Obesity_Level",
-            category_orders={
-                "Obesity_Level": obesity_order
-            },
-            color_discrete_map=OBESITY_COLORS,
-            points="outliers",
-            title=f"{box_col} by Obesity Level"
-        )
-
-        fig.update_traces(
-            hovertemplate=(
-                "<b>Obesity Level:</b> %{x}<br>"
-                f"<b>{box_col}:</b> %{{y}}"
-                "<extra></extra>"
+        with st.container(height=700, border=True):
+            st.markdown("### 📦 Interactive Boxplot")
+    
+            box_col = st.selectbox(
+                "Numeric variable",
+                num_options,
+                index=(
+                    num_options.index("Weight")
+                    if "Weight" in num_options
+                    else 0
+                ),
+                key="box_col"
             )
-        )
-
-        fig.update_layout(
-            height=550,
-            xaxis_tickangle=-45,
-            showlegend=False
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+    
+            fig = px.box(
+                filtered,
+                x="Obesity_Level",
+                y=box_col,
+                color="Obesity_Level",
+                category_orders={
+                    "Obesity_Level": obesity_order
+                },
+                color_discrete_map=OBESITY_COLORS,
+                points="outliers",
+                title=f"{box_col} by Obesity Level"
+            )
+    
+            fig.update_traces(
+                hovertemplate=(
+                    "<b>Obesity Level:</b> %{x}<br>"
+                    f"<b>{box_col}:</b> %{{y}}"
+                    "<extra></extra>"
+                )
+            )
+    
+            fig.update_layout(
+                height=550,
+                xaxis_tickangle=-45,
+                showlegend=False
+            )
+    
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
     # ========================================================
     # 5. CORRELATION HEATMAP
