@@ -16,10 +16,10 @@ import json
 from pathlib import Path
 
 import joblib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from sklearn.metrics import (
     accuracy_score,
@@ -35,6 +35,20 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import label_binarize
 
+#test
+test_fig = go.Figure(
+    data=[
+        go.Bar(
+            x=["Test"],
+            y=[1]
+        )
+    ]
+)
+
+st.plotly_chart(test_fig, use_container_width=True)
+
+
+
 # ============================================================
 # PAGE CONFIG (must be the first Streamlit call)
 # ============================================================
@@ -46,7 +60,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-sns.set_theme(style="whitegrid")
 MODELS_DIR = Path(__file__).parent / "models"
 
 MODEL_FILES = {
