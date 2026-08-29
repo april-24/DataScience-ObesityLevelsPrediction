@@ -433,41 +433,41 @@ with tab_predict:
                 }).set_index("Obesity_Level").reindex(obesity_order)
 
                 fig = px.bar(
-    proba_df.reset_index(),
-    x="Probability",
-    y="Obesity_Level",
-    orientation="h",
-    title=f"Class Probabilities — {chosen_model_name}",
-    text="Probability"
-)
+                    proba_df.reset_index(),
+                    x="Probability",
+                    y="Obesity_Level",
+                    orientation="h",
+                    title=f"Class Probabilities — {chosen_model_name}",
+                    text="Probability"
+                )
 
-fig.update_traces(
-    texttemplate="%{x:.1%}",
-    textposition="outside",
-    hovertemplate=(
-        "<b>Obesity Level:</b> %{y}<br>"
-        "<b>Probability:</b> %{x:.2%}"
-        "<extra></extra>"
-    )
-)
+                fig.update_traces(
+                    texttemplate="%{x:.1%}",
+                    textposition="outside",
+                    hovertemplate=(
+                    "<b>Obesity Level:</b> %{y}<br>"
+                    "<b>Probability:</b> %{x:.2%}"
+                    "<extra></extra>"
+                )
+              )
 
-fig.update_xaxes(
-    range=[0, 1],
-    title="Predicted Probability"
-)
+                fig.update_xaxes(
+                    range=[0, 1],
+                    title="Predicted Probability"
+                )
 
-fig.update_yaxes(
-    title="Obesity Level"
-)
+                fig.update_yaxes(
+                    title="Obesity Level"
+                )
 
-fig.update_layout(
-    height=450
-)
+                fig.update_layout(
+                    height=450
+                )
 
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
             else:
                 st.info("This model does not expose class probabilities.")
 
