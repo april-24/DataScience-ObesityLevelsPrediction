@@ -1168,7 +1168,7 @@ with tab_explore:
                         yanchor="bottom",
                         y=-0,
                         xanchor="center",
-                        x=0.5
+                        x=0.5,
 
                         font=dict(
                             size=10
