@@ -2063,18 +2063,43 @@ with tab_performance:
         with cm_col:
 
             st.markdown("### Confusion Matrix")
-
+        
+            # Desired ordinal order
+            ordinal_order = [
+                "Insufficient Weight",
+                "Normal Weight",
+                "Overweight Level I",
+                "Overweight Level II",
+                "Obesity Type I",
+                "Obesity Type II",
+                "Obesity Type III"
+            ]
+        
+            # Keep only classes that actually exist in the dataset
+            available_classes = [
+                c for c in ordinal_order
+                if c in label_encoder.classes_
+            ]
+        
+            # Convert class names to encoded labels
+            ordinal_indices = [
+                list(label_encoder.classes_).index(c)
+                for c in available_classes
+            ]
+        
+            # Create confusion matrix using ordinal label order
             cm = confusion_matrix(
                 y_test,
-                y_pred
+                y_pred,
+                labels=ordinal_indices
             )
-
+        
             cm_df = pd.DataFrame(
                 cm,
-                index=label_encoder.classes_,
-                columns=label_encoder.classes_
+                index=available_classes,
+                columns=available_classes
             )
-
+        
             fig = px.imshow(
                 cm_df,
                 text_auto=True,
@@ -2086,7 +2111,7 @@ with tab_performance:
                     "color": "Count"
                 }
             )
-
+        
             fig.update_traces(
                 hovertemplate=(
                     "<b>Actual:</b> %{y}<br>"
@@ -2095,16 +2120,25 @@ with tab_performance:
                     "<extra></extra>"
                 )
             )
-
-            fig.update_layout(
-                height=550
+        
+            fig.update_xaxes(
+                categoryorder="array",
+                categoryarray=available_classes
             )
-
+        
+            fig.update_yaxes(
+                categoryorder="array",
+                categoryarray=available_classes
+            )
+        
+            fig.update_layout(
+                height=600
+            )
+        
             st.plotly_chart(
                 fig,
                 use_container_width=True
             )
-
         # ----------------------------------------------------
         # ROC CURVES
         # ----------------------------------------------------
