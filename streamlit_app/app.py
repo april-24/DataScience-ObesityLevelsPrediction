@@ -1568,374 +1568,489 @@ with tab_explore:
 # ============================================================
 # TAB 4 — PREDICTION HISTORY
 # ============================================================
+
 with tab_history:
 
     st.header("🕘 Prediction History")
 
     st.caption(
-        "View the obesity predictions made during this session. "
-        "The charts update automatically whenever a new prediction is generated."
+        "View and filter all obesity predictions made during the current session."
     )
 
     # ========================================================
-    # INITIALISE HISTORY
-    # ========================================================
-
-    if "prediction_history" not in st.session_state:
-        st.session_state.prediction_history = []
-
-    # ========================================================
-    # NO HISTORY
+    # CHECK HISTORY
     # ========================================================
 
     if len(st.session_state.prediction_history) == 0:
 
         st.info(
             "📭 No prediction history yet. "
-            "Go to the **Prediction** tab and make a prediction."
+            "Go to the **🔮 Prediction** tab and make a prediction first."
         )
 
     else:
 
         # ====================================================
-        # HISTORY DATAFRAME
+        # CONVERT HISTORY TO DATAFRAME
         # ====================================================
 
         history_df = pd.DataFrame(
             st.session_state.prediction_history
         )
 
-        # Add prediction number
-        history_df["Prediction"] = range(
-            1,
-            len(history_df) + 1
-        )
-
         # ====================================================
-        # SUMMARY METRICS
+        # FILTER SECTION
         # ====================================================
 
-        st.subheader("📊 History Summary")
+        st.subheader("🔎 Filter Prediction History")
 
-        total_predictions = len(history_df)
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
 
-        most_common_prediction = (
-            history_df["Obesity_Level"]
-            .value_counts()
-            .idxmax()
-        )
+        # ====================================================
+        # MODEL FILTER
+        # ====================================================
 
-        most_common_count = (
-            history_df["Obesity_Level"]
-            .value_counts()
-            .max()
-        )
+        with filter_col1:
 
-        models_used = (
-            history_df["Model"]
-            .nunique()
-        )
-
-        h1, h2, h3 = st.columns(3)
-
-        with h1:
-
-            st.metric(
-                "Total Predictions",
-                total_predictions
+            model_options = sorted(
+                history_df["Model"].unique()
             )
 
-        with h2:
+            selected_models = st.multiselect(
+                "Select Model",
+                options=model_options,
+                default=model_options,
+                key="history_model_filter"
+            )
 
-            st.metric(
-                "Most Common Prediction",
-                most_common_prediction.replace(
-                    "_",
-                    " "
+        # ====================================================
+        # OBESITY LEVEL FILTER
+        # ====================================================
+
+        with filter_col2:
+
+            selected_levels = st.multiselect(
+                "Select Obesity Level",
+                options=obesity_order,
+                default=obesity_order,
+                format_func=lambda x: x.replace("_", " "),
+                key="history_level_filter"
+            )
+
+        # ====================================================
+        # SORT ORDER
+        # ====================================================
+
+        with filter_col3:
+
+            sort_order = st.selectbox(
+                "Prediction Order",
+                [
+                    "Ascending",
+                    "Descending"
+                ],
+                key="history_sort_order"
+            )
+
+        # ====================================================
+        # APPLY FILTERS
+        # ====================================================
+
+        filtered_history = history_df[
+            history_df["Model"].isin(selected_models)
+            &
+            history_df["Obesity_Level"].isin(selected_levels)
+        ].copy()
+
+        # ====================================================
+        # SORT BY PREDICTION NUMBER
+        # ====================================================
+
+        if sort_order == "Ascending":
+
+            filtered_history = (
+                filtered_history
+                .sort_values(
+                    "Prediction_Number",
+                    ascending=True
                 )
             )
 
-        with h3:
+        else:
 
-            st.metric(
-                "Models Used",
-                models_used
+            filtered_history = (
+                filtered_history
+                .sort_values(
+                    "Prediction_Number",
+                    ascending=False
+                )
             )
-
-        st.divider()
 
         # ====================================================
-        # TWO CHARTS IN ONE LARGE BOX
+        # FILTER SUMMARY
         # ====================================================
 
-        with st.container(border=True):
+        st.caption(
+            f"Showing **{len(filtered_history)}** "
+            f"of **{len(history_df)}** predictions."
+        )
 
-            st.subheader(
-                "📈 Prediction History Overview"
+        # ====================================================
+        # NO RESULTS
+        # ====================================================
+
+        if filtered_history.empty:
+
+            st.warning(
+                "No prediction records match the selected filters."
             )
 
-            history_chart_col, history_pie_col = st.columns(
-                2,
-                gap="medium"
+        else:
+
+            # =================================================
+            # SUMMARY
+            # =================================================
+
+            st.subheader("📊 Prediction Summary")
+
+            total_predictions = len(
+                filtered_history
             )
+
+            most_common = (
+                filtered_history[
+                    "Obesity_Level"
+                ]
+                .value_counts()
+                .idxmax()
+            )
+
+            latest_model = (
+                filtered_history[
+                    "Model"
+                ].iloc[-1]
+            )
+
+            s1, s2, s3 = st.columns(3)
+
+            with s1:
+
+                st.metric(
+                    "Filtered Predictions",
+                    total_predictions
+                )
+
+            with s2:
+
+                st.metric(
+                    "Most Predicted Level",
+                    str(
+                        most_common
+                    ).replace(
+                        "_",
+                        " "
+                    )
+                )
+
+            with s3:
+
+                st.metric(
+                    "Model",
+                    latest_model
+                )
+
+            st.divider()
+
+            # =================================================
+            # CHARTS
+            # =================================================
+
+            chart_col1, chart_col2 = st.columns(2)
 
             # =================================================
             # LINE CHART
             # =================================================
 
-            with history_chart_col:
+            with chart_col1:
 
                 with st.container(
-                    border=True,
-                    height=600
+                    border=True
                 ):
 
-                    st.markdown(
-                        "### 📈 Prediction Trend"
+                    st.subheader(
+                        "📈 Prediction History"
                     )
 
-                    # Convert obesity classes to ordinal numbers
-                    ordinal_order = [
-                        "Insufficient_Weight",
-                        "Normal_Weight",
-                        "Overweight_Level_I",
-                        "Overweight_Level_II",
-                        "Obesity_Type_I",
-                        "Obesity_Type_II",
-                        "Obesity_Type_III"
-                    ]
+                    # -----------------------------------------
+                    # ORDINAL ENCODING
+                    # -----------------------------------------
 
                     ordinal_mapping = {
-                        class_name: index + 1
-                        for index, class_name
-                        in enumerate(ordinal_order)
+                        "Insufficient_Weight": 1,
+                        "Normal_Weight": 2,
+                        "Overweight_Level_I": 3,
+                        "Overweight_Level_II": 4,
+                        "Obesity_Type_I": 5,
+                        "Obesity_Type_II": 6,
+                        "Obesity_Type_III": 7
                     }
 
-                    history_df["Ordinal_Level"] = (
-                        history_df["Obesity_Level"]
-                        .map(ordinal_mapping)
+                    line_df = (
+                        filtered_history
+                        .copy()
                     )
 
-                    # -----------------------------------------
-                    # LINE CHART
-                    # -----------------------------------------
+                    line_df[
+                        "Ordinal_Level"
+                    ] = (
+                        line_df[
+                            "Obesity_Level"
+                        ]
+                        .map(
+                            ordinal_mapping
+                        )
+                    )
 
-                    fig_history = go.Figure()
-
-                    fig_history.add_trace(
-                        go.Scatter(
-                            x=history_df["Prediction"],
-                            y=history_df["Ordinal_Level"],
-                            mode="lines+markers",
-                            text=history_df["Obesity_Level"],
-                            customdata=np.column_stack(
-                                [
-                                    history_df["Model"],
-                                    history_df["Obesity_Level"]
-                                ]
-                            ),
-                            hovertemplate=(
-                                "<b>Prediction:</b> %{x}<br>"
-                                "<b>Obesity Level:</b> %{customdata[1]}<br>"
-                                "<b>Model:</b> %{customdata[0]}"
-                                "<extra></extra>"
-                            ),
-                            marker=dict(
-                                size=10
-                            ),
-                            line=dict(
-                                width=3
-                            )
+                    fig_line = px.line(
+                        line_df,
+                        x="Prediction_Number",
+                        y="Ordinal_Level",
+                        markers=True,
+                        color="Model",
+                        hover_data=[
+                            "Time",
+                            "Model",
+                            "Obesity_Level"
+                        ],
+                        title=(
+                            "Obesity Level "
+                            "Prediction Trend"
                         )
                     )
 
                     # -----------------------------------------
-                    # ORDINAL Y-AXIS
+                    # Y AXIS
                     # -----------------------------------------
 
-                    fig_history.update_yaxes(
-                        tickmode="array",
-                        tickvals=list(
-                            range(
-                                1,
-                                len(ordinal_order) + 1
-                            )
-                        ),
-                        ticktext=[
-                            x.replace(
-                                "_",
-                                " "
-                            )
-                            for x in ordinal_order
-                        ],
+                    fig_line.update_yaxes(
                         title="Obesity Level",
+
+                        tickmode="array",
+
+                        tickvals=[
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7
+                        ],
+
+                        ticktext=[
+                            "Insufficient Weight",
+                            "Normal Weight",
+                            "Overweight I",
+                            "Overweight II",
+                            "Obesity I",
+                            "Obesity II",
+                            "Obesity III"
+                        ],
+
                         range=[
                             0.5,
-                            len(ordinal_order) + 0.5
+                            7.5
                         ]
                     )
 
-                    fig_history.update_xaxes(
+                    fig_line.update_xaxes(
                         title="Prediction Number",
                         dtick=1
                     )
 
-                    fig_history.update_layout(
-                        height=480,
+                    fig_line.update_traces(
+                        hovertemplate=(
+                            "<b>Prediction:</b> %{x}<br>"
+                            "<b>Obesity Level:</b> "
+                            "%{customdata[2]}<br>"
+                            "<b>Model:</b> "
+                            "%{customdata[1]}<br>"
+                            "<b>Time:</b> "
+                            "%{customdata[0]}"
+                            "<extra></extra>"
+                        )
+                    )
+
+                    fig_line.update_layout(
+                        height=500,
+
                         margin=dict(
                             l=20,
                             r=20,
-                            t=30,
-                            b=50
-                        ),
-                        hovermode="closest"
+                            t=70,
+                            b=60
+                        )
                     )
 
                     st.plotly_chart(
-                        fig_history,
+                        fig_line,
                         use_container_width=True,
+
                         config={
                             "displayModeBar": False
                         }
-                    )
-
-                    st.caption(
-                        "The vertical axis follows the ordinal order "
-                        "from Insufficient Weight (1) to Obesity Type III (7)."
                     )
 
             # =================================================
             # PIE CHART
             # =================================================
 
-            with history_pie_col:
+            with chart_col2:
 
                 with st.container(
-                    border=True,
-                    height=600
+                    border=True
                 ):
 
-                    st.markdown(
-                        "### 🍩 Prediction Distribution"
+                    st.subheader(
+                        "🥧 Prediction Distribution"
                     )
 
-                    # -----------------------------------------
-                    # COUNT PREDICTIONS
-                    # -----------------------------------------
-
-                    history_counts = (
-                        history_df[
+                    pie_counts = (
+                        filtered_history[
                             "Obesity_Level"
                         ]
                         .value_counts()
                         .reindex(
-                            ordinal_order
+                            obesity_order
                         )
                         .fillna(0)
                         .reset_index()
                     )
 
-                    history_counts.columns = [
+                    pie_counts.columns = [
                         "Obesity_Level",
                         "Count"
                     ]
 
-                    history_counts = (
-                        history_counts[
-                            history_counts["Count"] > 0
+                    pie_counts = (
+                        pie_counts[
+                            pie_counts[
+                                "Count"
+                            ] > 0
                         ]
                     )
 
-                    # -----------------------------------------
-                    # PIE CHART
-                    # -----------------------------------------
-
-                    fig_history_pie = px.pie(
-                        history_counts,
+                    fig_pie = px.pie(
+                        pie_counts,
                         names="Obesity_Level",
                         values="Count",
+                        hole=0.35,
                         color="Obesity_Level",
-                        color_discrete_map=OBESITY_COLORS,
+
+                        color_discrete_map=(
+                            OBESITY_COLORS
+                        ),
+
                         category_orders={
                             "Obesity_Level":
-                                ordinal_order
-                        },
-                        hole=0.35
+                                obesity_order
+                        }
                     )
 
-                    fig_history_pie.update_traces(
+                    fig_pie.update_traces(
                         textinfo="percent",
                         textposition="inside",
+
                         hovertemplate=(
-                            "<b>Obesity Level:</b> %{label}<br>"
-                            "<b>Predictions:</b> %{value}<br>"
-                            "<b>Percentage:</b> %{percent}"
+                            "<b>Obesity Level:</b> "
+                            "%{label}<br>"
+                            "<b>Predictions:</b> "
+                            "%{value}<br>"
+                            "<b>Percentage:</b> "
+                            "%{percent}"
                             "<extra></extra>"
                         )
                     )
 
-                    fig_history_pie.update_layout(
-                        height=480,
+                    fig_pie.update_layout(
+                        height=500,
+
                         margin=dict(
-                            l=0,
-                            r=0,
-                            t=20,
-                            b=100
+                            l=20,
+                            r=20,
+                            t=70,
+                            b=80
                         ),
+
                         legend=dict(
                             title="Obesity Level",
+
                             orientation="h",
+
                             x=0.5,
                             xanchor="center",
-                            y=-0.20,
+
+                            y=-0.15,
                             yanchor="top",
+
                             font=dict(
-                                size=9
+                                size=10
                             )
                         )
                     )
 
                     st.plotly_chart(
-                        fig_history_pie,
+                        fig_pie,
                         use_container_width=True,
+
                         config={
                             "displayModeBar": False
                         }
                     )
 
-        # ====================================================
-        # PREDICTION HISTORY TABLE
-        # ====================================================
+            # =================================================
+            # HISTORY TABLE
+            # =================================================
 
-        st.divider()
+            st.divider()
 
-        st.subheader(
-            "📋 Prediction History Table"
-        )
+            st.subheader(
+                "📋 Prediction History Table"
+            )
 
-        display_history = history_df[
-            [
-                "Prediction",
-                "Obesity_Level",
-                "Model"
-            ]
-        ].copy()
+            display_history = (
+                filtered_history
+                .copy()
+            )
 
-        display_history[
-            "Obesity_Level"
-        ] = display_history[
-            "Obesity_Level"
-        ].str.replace(
-            "_",
-            " ",
-            regex=False
-        )
+            display_history[
+                "Obesity_Level"
+            ] = (
+                display_history[
+                    "Obesity_Level"
+                ]
+                .astype(str)
+                .str.replace(
+                    "_",
+                    " ",
+                    regex=False
+                )
+            )
 
-        st.dataframe(
-            display_history,
-            use_container_width=True,
-            hide_index=True
-        )
+            st.dataframe(
+                display_history[
+                    [
+                        "Prediction_Number",
+                        "Time",
+                        "Model",
+                        "Obesity_Level"
+                    ]
+                ],
+
+                use_container_width=True,
+
+                hide_index=True
+            )
 
         # ====================================================
         # CLEAR HISTORY
@@ -1944,7 +2059,7 @@ with tab_history:
         st.divider()
 
         clear_col1, clear_col2 = st.columns(
-            [3, 1]
+            [4, 1]
         )
 
         with clear_col2:
