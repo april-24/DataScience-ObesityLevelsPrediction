@@ -771,7 +771,7 @@ with tab_predict:
             [1, 1.3]
         )
 
-        # ========================================================
+# ========================================================
 # PREDICTION
 # ========================================================
 
@@ -1292,7 +1292,7 @@ with tab_explore:
     chart3, chart4 = st.columns(2)
 
     with chart3:
-        with st.container(height=700, border=True):
+        with st.container(height=800, border=True):
             st.markdown("### 🔵 Interactive Scatterplot")
     
             sx = st.selectbox(
@@ -1362,7 +1362,7 @@ with tab_explore:
     # ========================================================
     
     with chart4:
-        with st.container(height=700, border=True):
+        with st.container(height=800, border=True):
             st.markdown("### 📦 Interactive Boxplot")
     
             box_col = st.selectbox(
