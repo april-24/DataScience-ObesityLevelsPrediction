@@ -1166,13 +1166,13 @@ with tab_explore:
                     legend=dict(
                         title="Obesity Level",
                         orientation="h",
-        
+                    
                         x=0.5,
                         xanchor="center",
-        
-                        y=0,
-                        yanchor="bottom",
-        
+                    
+                        y=-0.12,          # Move legend DOWN
+                        yanchor="top",
+                    
                         font=dict(
                             size=10
                         )
