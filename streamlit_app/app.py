@@ -756,25 +756,6 @@ with tab_predict:
             )[0]
         )
 
-        # SAVE HISTORY 
-        history_record = { 
-        	"Time": 
-        		pd.Timestamp.now().strftime( 
-        			"%H:%M:%S" 
-        	), 
-        	"Prediction_Number": 				
-        		len( 
-        			st.session_state.prediction_history 
-        		) + 1, 
-        	"Model": 
-        		chosen_model_name, 
-        	"Obesity_Level": 
-        		pred_label 
-        	} 
-        st.session_state.prediction_history.append( 
-            history_record 
-        )
-
         # ----------------------------------------------------
         # BMI
         # ----------------------------------------------------
@@ -887,54 +868,54 @@ if submitted:
     # ====================================================
     # PREDICTION RESULT
     # ====================================================
-    
+
     with result_col:
-    
+
         st.subheader("🎯 Prediction Result")
-    
+
         st.metric(
             "Predicted Obesity Level",
             pred_label.replace("_", " ")
         )
-    
+
         st.caption(
             f"Model used: **{chosen_model_name}**"
         )
-    
+
         st.markdown("**Recommendation:**")
-    
+
         st.write(
             RECOMMENDATIONS.get(
                 pred_label,
                 "Consult a healthcare professional for guidance."
             )
         )
-    
+
     # ====================================================
     # CLASS PROBABILITY CHART
     # ====================================================
-    
+
     with chart_col:
-    
+
         if hasattr(
             pipeline,
             "predict_proba"
         ):
-    
+
             proba = pipeline.predict_proba(
                 input_row
             )[0]
-    
+
             proba_df = pd.DataFrame({
-    
+
                 "Obesity_Level":
                     label_encoder.classes_,
-    
+
                 "Probability":
                     proba
-    
+
             })
-    
+
             proba_df = (
                 proba_df
                 .set_index(
@@ -945,52 +926,52 @@ if submitted:
                 )
                 .reset_index()
             )
-    
+
             fig = px.bar(
                 proba_df,
-    
+
                 x="Probability",
-    
+
                 y="Obesity_Level",
-    
+
                 orientation="h",
-    
+
                 title=(
                     f"Class Probabilities — "
                     f"{chosen_model_name}"
                 ),
-    
+
                 text="Probability",
-    
+
                 category_orders={
                     "Obesity_Level":
                         obesity_order
                 }
             )
-    
+
             fig.update_traces(
-    
+
                 texttemplate="%{x:.1%}",
-    
+
                 textposition="outside",
-    
+
                 hovertemplate=(
                     "<b>Obesity Level:</b> %{y}<br>"
                     "<b>Probability:</b> %{x:.2%}"
                     "<extra></extra>"
                 )
             )
-    
+
             fig.update_xaxes(
                 range=[0, 1],
                 title="Predicted Probability",
                 tickformat=".0%"
             )
-    
+
             fig.update_yaxes(
                 title="Obesity Level"
             )
-    
+
             fig.update_layout(
                 height=450,
                 margin=dict(
@@ -1000,19 +981,19 @@ if submitted:
                     b=40
                 )
             )
-    
+
             st.plotly_chart(
                 fig,
                 use_container_width=True
             )
-    
+
         else:
-    
+
             st.info(
                 "This model does not expose "
                 "class probabilities."
             )
-            
+        
 # ============================================================
 # TAB 3 — DATA EXPLORATION
 # ============================================================
@@ -1566,515 +1547,7 @@ with tab_explore:
         )
 
 # ============================================================
-# TAB 4 — PREDICTION HISTORY
-# ============================================================
-
-with tab_history:
-
-    st.header("🕘 Prediction History")
-
-    st.caption(
-        "View and filter all obesity predictions made during the current session."
-    )
-
-    # ========================================================
-    # CHECK HISTORY
-    # ========================================================
-
-    if len(st.session_state.prediction_history) == 0:
-
-        st.info(
-            "📭 No prediction history yet. "
-            "Go to the **🔮 Prediction** tab and make a prediction first."
-        )
-
-    else:
-
-        # ====================================================
-        # CONVERT HISTORY TO DATAFRAME
-        # ====================================================
-
-        history_df = pd.DataFrame(
-            st.session_state.prediction_history
-        )
-
-        # ====================================================
-        # FILTER SECTION
-        # ====================================================
-
-        st.subheader("🔎 Filter Prediction History")
-
-        filter_col1, filter_col2, filter_col3 = st.columns(3)
-
-        # ====================================================
-        # MODEL FILTER
-        # ====================================================
-
-        with filter_col1:
-
-            model_options = sorted(
-                history_df["Model"].unique()
-            )
-
-            selected_models = st.multiselect(
-                "Select Model",
-                options=model_options,
-                default=model_options,
-                key="history_model_filter"
-            )
-
-        # ====================================================
-        # OBESITY LEVEL FILTER
-        # ====================================================
-
-        with filter_col2:
-
-            selected_levels = st.multiselect(
-                "Select Obesity Level",
-                options=obesity_order,
-                default=obesity_order,
-                format_func=lambda x: x.replace("_", " "),
-                key="history_level_filter"
-            )
-
-        # ====================================================
-        # SORT ORDER
-        # ====================================================
-
-        with filter_col3:
-
-            sort_order = st.selectbox(
-                "Prediction Order",
-                [
-                    "Ascending",
-                    "Descending"
-                ],
-                key="history_sort_order"
-            )
-
-        # ====================================================
-        # APPLY FILTERS
-        # ====================================================
-
-        filtered_history = history_df[
-            history_df["Model"].isin(selected_models)
-            &
-            history_df["Obesity_Level"].isin(selected_levels)
-        ].copy()
-
-        # ====================================================
-        # SORT BY PREDICTION NUMBER
-        # ====================================================
-
-        if sort_order == "Ascending":
-
-            filtered_history = (
-                filtered_history
-                .sort_values(
-                    "Prediction_Number",
-                    ascending=True
-                )
-            )
-
-        else:
-
-            filtered_history = (
-                filtered_history
-                .sort_values(
-                    "Prediction_Number",
-                    ascending=False
-                )
-            )
-
-        # ====================================================
-        # FILTER SUMMARY
-        # ====================================================
-
-        st.caption(
-            f"Showing **{len(filtered_history)}** "
-            f"of **{len(history_df)}** predictions."
-        )
-
-        # ====================================================
-        # NO RESULTS
-        # ====================================================
-
-        if filtered_history.empty:
-
-            st.warning(
-                "No prediction records match the selected filters."
-            )
-
-        else:
-
-            # =================================================
-            # SUMMARY
-            # =================================================
-
-            st.subheader("📊 Prediction Summary")
-
-            total_predictions = len(
-                filtered_history
-            )
-
-            most_common = (
-                filtered_history[
-                    "Obesity_Level"
-                ]
-                .value_counts()
-                .idxmax()
-            )
-
-            latest_model = (
-                filtered_history[
-                    "Model"
-                ].iloc[-1]
-            )
-
-            s1, s2, s3 = st.columns(3)
-
-            with s1:
-
-                st.metric(
-                    "Filtered Predictions",
-                    total_predictions
-                )
-
-            with s2:
-
-                st.metric(
-                    "Most Predicted Level",
-                    str(
-                        most_common
-                    ).replace(
-                        "_",
-                        " "
-                    )
-                )
-
-            with s3:
-
-                st.metric(
-                    "Model",
-                    latest_model
-                )
-
-            st.divider()
-
-            # =================================================
-            # CHARTS
-            # =================================================
-
-            chart_col1, chart_col2 = st.columns(2)
-
-            # =================================================
-            # LINE CHART
-            # =================================================
-
-            with chart_col1:
-
-                with st.container(
-                    border=True
-                ):
-
-                    st.subheader(
-                        "📈 Prediction History"
-                    )
-
-                    # -----------------------------------------
-                    # ORDINAL ENCODING
-                    # -----------------------------------------
-
-                    ordinal_mapping = {
-                        "Insufficient_Weight": 1,
-                        "Normal_Weight": 2,
-                        "Overweight_Level_I": 3,
-                        "Overweight_Level_II": 4,
-                        "Obesity_Type_I": 5,
-                        "Obesity_Type_II": 6,
-                        "Obesity_Type_III": 7
-                    }
-
-                    line_df = (
-                        filtered_history
-                        .copy()
-                    )
-
-                    line_df[
-                        "Ordinal_Level"
-                    ] = (
-                        line_df[
-                            "Obesity_Level"
-                        ]
-                        .map(
-                            ordinal_mapping
-                        )
-                    )
-
-                    fig_line = px.line(
-                        line_df,
-                        x="Prediction_Number",
-                        y="Ordinal_Level",
-                        markers=True,
-                        color="Model",
-                        hover_data=[
-                            "Time",
-                            "Model",
-                            "Obesity_Level"
-                        ],
-                        title=(
-                            "Obesity Level "
-                            "Prediction Trend"
-                        )
-                    )
-
-                    # -----------------------------------------
-                    # Y AXIS
-                    # -----------------------------------------
-
-                    fig_line.update_yaxes(
-                        title="Obesity Level",
-
-                        tickmode="array",
-
-                        tickvals=[
-                            1,
-                            2,
-                            3,
-                            4,
-                            5,
-                            6,
-                            7
-                        ],
-
-                        ticktext=[
-                            "Insufficient Weight",
-                            "Normal Weight",
-                            "Overweight I",
-                            "Overweight II",
-                            "Obesity I",
-                            "Obesity II",
-                            "Obesity III"
-                        ],
-
-                        range=[
-                            0.5,
-                            7.5
-                        ]
-                    )
-
-                    fig_line.update_xaxes(
-                        title="Prediction Number",
-                        dtick=1
-                    )
-
-                    fig_line.update_traces(
-                        hovertemplate=(
-                            "<b>Prediction:</b> %{x}<br>"
-                            "<b>Obesity Level:</b> "
-                            "%{customdata[2]}<br>"
-                            "<b>Model:</b> "
-                            "%{customdata[1]}<br>"
-                            "<b>Time:</b> "
-                            "%{customdata[0]}"
-                            "<extra></extra>"
-                        )
-                    )
-
-                    fig_line.update_layout(
-                        height=500,
-
-                        margin=dict(
-                            l=20,
-                            r=20,
-                            t=70,
-                            b=60
-                        )
-                    )
-
-                    st.plotly_chart(
-                        fig_line,
-                        use_container_width=True,
-
-                        config={
-                            "displayModeBar": False
-                        }
-                    )
-
-            # =================================================
-            # PIE CHART
-            # =================================================
-
-            with chart_col2:
-
-                with st.container(
-                    border=True
-                ):
-
-                    st.subheader(
-                        "🥧 Prediction Distribution"
-                    )
-
-                    pie_counts = (
-                        filtered_history[
-                            "Obesity_Level"
-                        ]
-                        .value_counts()
-                        .reindex(
-                            obesity_order
-                        )
-                        .fillna(0)
-                        .reset_index()
-                    )
-
-                    pie_counts.columns = [
-                        "Obesity_Level",
-                        "Count"
-                    ]
-
-                    pie_counts = (
-                        pie_counts[
-                            pie_counts[
-                                "Count"
-                            ] > 0
-                        ]
-                    )
-
-                    fig_pie = px.pie(
-                        pie_counts,
-                        names="Obesity_Level",
-                        values="Count",
-                        hole=0.35,
-                        color="Obesity_Level",
-
-                        color_discrete_map=(
-                            OBESITY_COLORS
-                        ),
-
-                        category_orders={
-                            "Obesity_Level":
-                                obesity_order
-                        }
-                    )
-
-                    fig_pie.update_traces(
-                        textinfo="percent",
-                        textposition="inside",
-
-                        hovertemplate=(
-                            "<b>Obesity Level:</b> "
-                            "%{label}<br>"
-                            "<b>Predictions:</b> "
-                            "%{value}<br>"
-                            "<b>Percentage:</b> "
-                            "%{percent}"
-                            "<extra></extra>"
-                        )
-                    )
-
-                    fig_pie.update_layout(
-                        height=500,
-
-                        margin=dict(
-                            l=20,
-                            r=20,
-                            t=70,
-                            b=80
-                        ),
-
-                        legend=dict(
-                            title="Obesity Level",
-
-                            orientation="h",
-
-                            x=0.5,
-                            xanchor="center",
-
-                            y=-0.15,
-                            yanchor="top",
-
-                            font=dict(
-                                size=10
-                            )
-                        )
-                    )
-
-                    st.plotly_chart(
-                        fig_pie,
-                        use_container_width=True,
-
-                        config={
-                            "displayModeBar": False
-                        }
-                    )
-
-            # =================================================
-            # HISTORY TABLE
-            # =================================================
-
-            st.divider()
-
-            st.subheader(
-                "📋 Prediction History Table"
-            )
-
-            display_history = (
-                filtered_history
-                .copy()
-            )
-
-            display_history[
-                "Obesity_Level"
-            ] = (
-                display_history[
-                    "Obesity_Level"
-                ]
-                .astype(str)
-                .str.replace(
-                    "_",
-                    " ",
-                    regex=False
-                )
-            )
-
-            st.dataframe(
-                display_history[
-                    [
-                        "Prediction_Number",
-                        "Time",
-                        "Model",
-                        "Obesity_Level"
-                    ]
-                ],
-
-                use_container_width=True,
-
-                hide_index=True
-            )
-
-        # ====================================================
-        # CLEAR HISTORY
-        # ====================================================
-
-        st.divider()
-
-        clear_col1, clear_col2 = st.columns(
-            [4, 1]
-        )
-
-        with clear_col2:
-
-            if st.button(
-                "🗑️ Clear History",
-                use_container_width=True
-            ):
-
-                st.session_state.prediction_history = []
-
-                st.rerun()
-
-# ============================================================
-# TAB 5 — MODEL PERFORMANCE
+# TAB 4 — MODEL PERFORMANCE
 # ============================================================
 with tab_performance:
 
