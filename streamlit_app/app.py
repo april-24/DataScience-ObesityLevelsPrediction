@@ -280,30 +280,6 @@ with tab_predict:
     cat_meta = metadata["categorical_features"]
 
     # ========================================================
-    # OBESITY ORDER
-    # ========================================================
-
-    obesity_order = [
-        "Insufficient_Weight",
-        "Normal_Weight",
-        "Overweight_Level_I",
-        "Overweight_Level_II",
-        "Obesity_Type_I",
-        "Obesity_Type_II",
-        "Obesity_Type_III"
-    ]
-
-    indicator_labels = [
-        "Insufficient Weight",
-        "Normal Weight",
-        "Overweight I",
-        "Overweight II",
-        "Obesity I",
-        "Obesity II",
-        "Obesity III"
-    ]
-
-    # ========================================================
     # FREQUENCY OPTIONS
     # ========================================================
 
@@ -314,131 +290,14 @@ with tab_predict:
         "Always"
     ]
 
-    freq_label = lambda x: (
-        "Never" if x == "no" else x
-    )
+    def freq_label(x):
+        return "Never" if x == "no" else x
 
-    yes_no_label = lambda x: (
-        "✅ Yes" if x == "yes" else "❌ No"
-    )
+    def yes_no_label(x):
+        return "✅ Yes" if x == "yes" else "❌ No"
 
     # ========================================================
-    # DEFAULT VALUES
-    # ========================================================
-
-    DEFAULTS = {
-
-        "pred_gender":
-            cat_meta["Gender"][0],
-
-        "pred_age":
-            round(
-                num_meta["Age"]["mean"],
-                1
-            ),
-
-        "pred_height":
-            round(
-                num_meta["Height"]["mean"],
-                2
-            ),
-
-        "pred_weight":
-            round(
-                num_meta["Weight"]["mean"],
-                1
-            ),
-
-        "pred_family_history":
-            cat_meta[
-                "Family_History_Overweight"
-            ][0],
-
-        "pred_favc":
-            cat_meta[
-                "Frequent_High_Caloric_Food"
-            ][0],
-
-        "pred_fcvc":
-            round(
-                num_meta[
-                    "Vegetable_Consumption_Freq"
-                ]["mean"],
-                1
-            ),
-
-        "pred_ncp":
-            round(
-                num_meta[
-                    "Main_Meals_Per_Day"
-                ]["mean"],
-                1
-            ),
-
-        "pred_caec":
-            "Sometimes",
-
-        "pred_calc":
-            "Sometimes",
-
-        "pred_smoke":
-            cat_meta["Smokes"][0],
-
-        "pred_scc":
-            cat_meta[
-                "Calorie_Monitoring"
-            ][0],
-
-        "pred_ch2o":
-            round(
-                num_meta[
-                    "Daily_Water_Intake"
-                ]["mean"],
-                1
-            ),
-
-        "pred_faf":
-            round(
-                num_meta[
-                    "Physical_Activity_Freq"
-                ]["mean"],
-                1
-            ),
-
-        "pred_tue":
-            round(
-                num_meta[
-                    "Technology_Usage_Time"
-                ]["mean"],
-                1
-            ),
-
-        "pred_mtrans":
-            cat_meta[
-                "Transportation_Mode"
-            ][0]
-    }
-
-    # ========================================================
-    # INITIALIZE SESSION STATE
-    # ========================================================
-
-    for key, value in DEFAULTS.items():
-
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-    if "prediction_result" not in st.session_state:
-        st.session_state.prediction_result = None
-
-    if "prediction_bmi" not in st.session_state:
-        st.session_state.prediction_bmi = None
-
-    if "prediction_model" not in st.session_state:
-        st.session_state.prediction_model = None
-
-    # ========================================================
-    # MODEL SELECTION
+    # AVAILABLE MODELS
     # ========================================================
 
     available_models = [
@@ -452,32 +311,33 @@ with tab_predict:
         else 0
     )
 
-    if "chosen_prediction_model" not in st.session_state:
-        st.session_state.chosen_prediction_model = (
-            available_models[
-                default_model_index
-            ]
-        )
+    # ========================================================
+    # RESTART STATE
+    # ========================================================
 
-    st.markdown(
-        "**Choose a model for prediction**"
-    )
+    if "prediction_reset_counter" not in st.session_state:
+        st.session_state.prediction_reset_counter = 0
+
+    reset_counter = st.session_state.prediction_reset_counter
+
+    # ========================================================
+    # MODEL SELECTION
+    # ========================================================
+
+    st.markdown("**Choose a model for prediction**")
 
     chosen_model_name = st.segmented_control(
         "Choose a model for prediction",
         available_models,
-        default=st.session_state.chosen_prediction_model,
+        default=available_models[default_model_index],
         label_visibility="collapsed",
-        key="chosen_prediction_model"
+        key=f"prediction_model_{reset_counter}"
     )
 
     if chosen_model_name is None:
-
-        chosen_model_name = (
-            available_models[
-                default_model_index
-            ]
-        )
+        chosen_model_name = available_models[
+            default_model_index
+        ]
 
     st.caption(
         f"Using **{chosen_model_name}**"
@@ -492,7 +352,9 @@ with tab_predict:
     # PREDICTION FORM
     # ========================================================
 
-    with st.form("prediction_form"):
+    with st.form(
+        f"prediction_form_{reset_counter}"
+    ):
 
         # ====================================================
         # PERSONAL & PHYSICAL ATTRIBUTES
@@ -517,7 +379,7 @@ with tab_predict:
                     "👩 Female"
                     if x == "Female"
                     else "👨 Male",
-                key="pred_gender"
+                key=f"gender_{reset_counter}"
             )
 
             age = st.number_input(
@@ -526,8 +388,12 @@ with tab_predict:
                     num_meta["Age"]["min"]
                 ),
                 max_value=100.0,
+                value=round(
+                    num_meta["Age"]["mean"],
+                    1
+                ),
                 step=1.0,
-                key="pred_age"
+                key=f"age_{reset_counter}"
             )
 
         with c2:
@@ -540,9 +406,13 @@ with tab_predict:
                 max_value=float(
                     num_meta["Height"]["max"]
                 ) + 0.3,
+                value=round(
+                    num_meta["Height"]["mean"],
+                    2
+                ),
                 step=0.01,
                 format="%.2f",
-                key="pred_height"
+                key=f"height_{reset_counter}"
             )
 
         with c3:
@@ -555,8 +425,12 @@ with tab_predict:
                 max_value=float(
                     num_meta["Weight"]["max"]
                 ) + 50.0,
+                value=round(
+                    num_meta["Weight"]["mean"],
+                    1
+                ),
                 step=1.0,
-                key="pred_weight"
+                key=f"weight_{reset_counter}"
             )
 
         # ====================================================
@@ -581,7 +455,7 @@ with tab_predict:
                 horizontal=True,
                 label_visibility="collapsed",
                 format_func=yes_no_label,
-                key="pred_family_history"
+                key=f"family_history_{reset_counter}"
             )
 
             st.markdown(
@@ -596,7 +470,7 @@ with tab_predict:
                 horizontal=True,
                 label_visibility="collapsed",
                 format_func=yes_no_label,
-                key="pred_favc"
+                key=f"favc_{reset_counter}"
             )
 
         with c5:
@@ -604,18 +478,30 @@ with tab_predict:
             fcvc = st.slider(
                 "Vegetable consumption frequency "
                 "(1 = never, 3 = always)",
-                1.0,
-                3.0,
+                min_value=1.0,
+                max_value=3.0,
+                value=round(
+                    num_meta[
+                        "Vegetable_Consumption_Freq"
+                    ]["mean"],
+                    1
+                ),
                 step=0.1,
-                key="pred_fcvc"
+                key=f"fcvc_{reset_counter}"
             )
 
             ncp = st.slider(
                 "Number of main meals per day",
-                1.0,
-                4.0,
+                min_value=1.0,
+                max_value=4.0,
+                value=round(
+                    num_meta[
+                        "Main_Meals_Per_Day"
+                    ]["mean"],
+                    1
+                ),
                 step=0.5,
-                key="pred_ncp"
+                key=f"ncp_{reset_counter}"
             )
 
         with c6:
@@ -627,8 +513,10 @@ with tab_predict:
             caec = st.select_slider(
                 "Eats food between meals?",
                 options=FREQUENCY_ORDER,
+                value="Sometimes",
+                label_visibility="collapsed",
                 format_func=freq_label,
-                key="pred_caec"
+                key=f"caec_{reset_counter}"
             )
 
             st.markdown(
@@ -638,12 +526,14 @@ with tab_predict:
             calc = st.select_slider(
                 "Alcohol consumption",
                 options=FREQUENCY_ORDER,
+                value="Sometimes",
+                label_visibility="collapsed",
                 format_func=freq_label,
-                key="pred_calc"
+                key=f"calc_{reset_counter}"
             )
 
         # ====================================================
-        # LIFESTYLE
+        # LIFESTYLE & PHYSICAL CONDITION
         # ====================================================
 
         st.subheader(
@@ -662,7 +552,7 @@ with tab_predict:
                 horizontal=True,
                 label_visibility="collapsed",
                 format_func=yes_no_label,
-                key="pred_smoke"
+                key=f"smoke_{reset_counter}"
             )
 
             st.markdown(
@@ -671,13 +561,11 @@ with tab_predict:
 
             scc = st.radio(
                 "Monitors calorie intake?",
-                cat_meta[
-                    "Calorie_Monitoring"
-                ],
+                cat_meta["Calorie_Monitoring"],
                 horizontal=True,
                 label_visibility="collapsed",
                 format_func=yes_no_label,
-                key="pred_scc"
+                key=f"scc_{reset_counter}"
             )
 
         with c8:
@@ -685,19 +573,31 @@ with tab_predict:
             ch2o = st.slider(
                 "Daily water intake "
                 "(1 = <1L, 3 = >2L)",
-                1.0,
-                3.0,
+                min_value=1.0,
+                max_value=3.0,
+                value=round(
+                    num_meta[
+                        "Daily_Water_Intake"
+                    ]["mean"],
+                    1
+                ),
                 step=0.1,
-                key="pred_ch2o"
+                key=f"ch2o_{reset_counter}"
             )
 
             faf = st.slider(
                 "Physical activity frequency "
                 "(0 = none, 3 = frequent)",
-                0.0,
-                3.0,
+                min_value=0.0,
+                max_value=3.0,
+                value=round(
+                    num_meta[
+                        "Physical_Activity_Freq"
+                    ]["mean"],
+                    1
+                ),
                 step=0.1,
-                key="pred_faf"
+                key=f"faf_{reset_counter}"
             )
 
         with c9:
@@ -705,10 +605,16 @@ with tab_predict:
             tue = st.slider(
                 "Technology usage time "
                 "(0 = low, 2 = high)",
-                0.0,
-                2.0,
+                min_value=0.0,
+                max_value=2.0,
+                value=round(
+                    num_meta[
+                        "Technology_Usage_Time"
+                    ]["mean"],
+                    1
+                ),
                 step=0.1,
-                key="pred_tue"
+                key=f"tue_{reset_counter}"
             )
 
             st.markdown(
@@ -717,20 +623,20 @@ with tab_predict:
 
             mtrans = st.pills(
                 "Usual transportation mode",
-                cat_meta[
+                cat_meta["Transportation_Mode"],
+                default=cat_meta[
                     "Transportation_Mode"
-                ],
+                ][0],
+                label_visibility="collapsed",
                 format_func=lambda x:
                     x.replace("_", " "),
-                key="pred_mtrans"
+                key=f"mtrans_{reset_counter}"
             )
 
             if mtrans is None:
-                mtrans = (
-                    st.session_state[
-                        "pred_mtrans"
-                    ]
-                )
+                mtrans = cat_meta[
+                    "Transportation_Mode"
+                ][0]
 
         # ====================================================
         # BUTTONS
@@ -752,6 +658,7 @@ with tab_predict:
 
             restart = st.form_submit_button(
                 "🔄 Restart",
+                type="primary",
                 use_container_width=True
             )
 
@@ -761,21 +668,7 @@ with tab_predict:
 
     if restart:
 
-        # Reset every feature
-        for key, value in DEFAULTS.items():
-            st.session_state[key] = value
-
-        # Reset prediction
-        st.session_state.prediction_result = None
-        st.session_state.prediction_bmi = None
-        st.session_state.prediction_model = None
-
-        # Reset model
-        st.session_state.chosen_prediction_model = (
-            available_models[
-                default_model_index
-            ]
-        )
+        st.session_state.prediction_reset_counter += 1
 
         st.rerun()
 
@@ -784,6 +677,10 @@ with tab_predict:
     # ========================================================
 
     if submitted:
+
+        # ----------------------------------------------------
+        # INPUT DATA
+        # ----------------------------------------------------
 
         input_row = pd.DataFrame([{
 
@@ -837,9 +734,9 @@ with tab_predict:
 
         }])
 
-        # ====================================================
+        # ----------------------------------------------------
         # MODEL
-        # ====================================================
+        # ----------------------------------------------------
 
         pipeline = models[
             chosen_model_name
@@ -856,25 +753,12 @@ with tab_predict:
             )[0]
         )
 
-        # ====================================================
+        # ----------------------------------------------------
         # BMI
-        # ====================================================
+        # ----------------------------------------------------
 
         bmi_value = (
             weight / (height ** 2)
-        )
-
-        # Save prediction
-        st.session_state.prediction_result = (
-            pred_label
-        )
-
-        st.session_state.prediction_bmi = (
-            bmi_value
-        )
-
-        st.session_state.prediction_model = (
-            chosen_model_name
         )
 
         # ====================================================
@@ -888,7 +772,7 @@ with tab_predict:
         )
 
         # ====================================================
-        # RESULT CARD
+        # PREDICTION RESULT
         # ====================================================
 
         with result_col:
@@ -928,7 +812,7 @@ with tab_predict:
             )
 
         # ====================================================
-        # PROBABILITY CHART
+        # CLASS PROBABILITY CHART
         # ====================================================
 
         with chart_col:
@@ -1029,134 +913,6 @@ with tab_predict:
                     "This model does not expose "
                     "class probabilities."
                 )
-
-        # ====================================================
-        # OBESITY LEVEL INDICATOR
-        # ====================================================
-
-        st.divider()
-
-        st.subheader(
-            "📍 Obesity Level Indicator"
-        )
-
-        # ----------------------------------------------------
-        # Make sure prediction exists in the order
-        # ----------------------------------------------------
-
-        if pred_label in obesity_order:
-
-            current_index = (
-                obesity_order.index(
-                    pred_label
-                )
-            )
-
-        else:
-
-            current_index = -1
-
-        # ----------------------------------------------------
-        # INDICATOR
-        # ----------------------------------------------------
-
-        indicator_cols = st.columns(
-            len(obesity_order)
-        )
-
-        for i, col in enumerate(
-            indicator_cols
-        ):
-
-            with col:
-
-                if i == current_index:
-
-                    st.markdown(
-                        f"""
-                        <div style="
-                            text-align:center;
-                            padding:12px 4px;
-                            border-radius:12px;
-                            border:3px solid #FF4B4B;
-                            background-color:#FFF0F0;
-                            min-height:95px;
-                            box-shadow:0 2px 6px rgba(0,0,0,0.12);
-                        ">
-
-                            <div style="
-                                font-size:26px;
-                                line-height:28px;
-                            ">
-                                🔴
-                            </div>
-
-                            <div style="
-                                font-size:12px;
-                                font-weight:700;
-                                margin-top:7px;
-                            ">
-                                {indicator_labels[i]}
-                            </div>
-
-                            <div style="
-                                font-size:10px;
-                                color:#D32F2F;
-                                font-weight:700;
-                                margin-top:5px;
-                            ">
-                                CURRENT LEVEL
-                            </div>
-
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                else:
-
-                    st.markdown(
-                        f"""
-                        <div style="
-                            text-align:center;
-                            padding:12px 4px;
-                            border-radius:12px;
-                            border:1px solid #D9D9D9;
-                            background-color:#F8F8F8;
-                            min-height:95px;
-                        ">
-
-                            <div style="
-                                font-size:26px;
-                                line-height:28px;
-                                color:#AAAAAA;
-                            ">
-                                ○
-                            </div>
-
-                            <div style="
-                                font-size:12px;
-                                color:#666666;
-                                margin-top:7px;
-                            ">
-                                {indicator_labels[i]}
-                            </div>
-
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-        # ====================================================
-        # CURRENT LEVEL
-        # ====================================================
-
-        st.markdown("")
-
-        st.success(
-            f"🎯 **Predicted obesity level: "
-            f"{pred_label.replace('_', ' ')}**"
-        )
         
 # ============================================================
 # TAB 3 — DATA EXPLORATION
