@@ -639,86 +639,86 @@ with tab_explore:
 # 2. CLEAR HISTOGRAM
 # ========================================================
     with chart2:
-    st.markdown("**Numeric Distribution (Histogram)**")
-
-    numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
-
-    hist_col = st.selectbox(
-        "Choose a numeric column",
-        numeric_cols,
-        index=(
-            numeric_cols.index("BMI")
-            if "BMI" in numeric_cols
-            else 0
-        ),
-        key="hist_col"
-    )
-
-    # Number of bins
-    hist_bins = st.slider(
-        "Number of bins",
-        min_value=5,
-        max_value=40,
-        value=20,
-        step=5,
-        key="hist_bins"
-    )
-
-    # Interactive histogram
-    fig = px.histogram(
-        filtered,
-        x=hist_col,
-        nbins=hist_bins,
-        marginal="box",       # Small boxplot above histogram
-        opacity=0.85,
-        title=f"Distribution of {hist_col}"
-    )
-
-    # Add KDE-like smooth curve using Plotly
-    # Histogram itself remains clean and easy to read
-    fig.update_traces(
-        hovertemplate=(
-            f"<b>{hist_col}</b>: %{{x}}<br>"
-            "<b>Count</b>: %{y}"
-            "<extra></extra>"
+        st.markdown("**Numeric Distribution (Histogram)**")
+    
+        numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
+    
+        hist_col = st.selectbox(
+            "Choose a numeric column",
+            numeric_cols,
+            index=(
+                numeric_cols.index("BMI")
+                if "BMI" in numeric_cols
+                else 0
+            ),
+            key="hist_col"
         )
-    )
-
-    fig.update_layout(
-        height=500,
-
-        xaxis=dict(
-            title=hist_col,
-            showgrid=False
-        ),
-
-        yaxis=dict(
-            title="Number of Records",
-            showgrid=True
-        ),
-
-        bargap=0.05,
-
-        hovermode="x unified",
-
-        margin=dict(
-            l=50,
-            r=30,
-            t=60,
-            b=50
+    
+        # Number of bins
+        hist_bins = st.slider(
+            "Number of bins",
+            min_value=5,
+            max_value=40,
+            value=20,
+            step=5,
+            key="hist_bins"
         )
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-    st.caption(
-        "💡 The histogram shows how the selected numeric variable "
-        "is distributed across the dataset. Hover over the bars "
-        "to view the number of records in each range."
-    )
+    
+        # Interactive histogram
+        fig = px.histogram(
+            filtered,
+            x=hist_col,
+            nbins=hist_bins,
+            marginal="box",       # Small boxplot above histogram
+            opacity=0.85,
+            title=f"Distribution of {hist_col}"
+        )
+    
+        # Add KDE-like smooth curve using Plotly
+        # Histogram itself remains clean and easy to read
+        fig.update_traces(
+            hovertemplate=(
+                f"<b>{hist_col}</b>: %{{x}}<br>"
+                "<b>Count</b>: %{y}"
+                "<extra></extra>"
+            )
+        )
+    
+        fig.update_layout(
+            height=500,
+    
+            xaxis=dict(
+                title=hist_col,
+                showgrid=False
+            ),
+    
+            yaxis=dict(
+                title="Number of Records",
+                showgrid=True
+            ),
+    
+            bargap=0.05,
+    
+            hovermode="x unified",
+    
+            margin=dict(
+                l=50,
+                r=30,
+                t=60,
+                b=50
+            )
+        )
+    
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+    
+        st.caption(
+            "💡 The histogram shows how the selected numeric variable "
+            "is distributed across the dataset. Hover over the bars "
+            "to view the number of records in each range."
+        )
 
     # ========================================================
     # 3. SCATTERPLOT
