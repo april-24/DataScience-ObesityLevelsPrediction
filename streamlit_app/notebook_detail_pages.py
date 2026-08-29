@@ -19,6 +19,12 @@ def _insight(text):
     )
 
 
+def _section(title):
+    """Add visual breathing room and a clear boundary before each EDA section."""
+    st.markdown('<div class="eda-section-gap"></div>', unsafe_allow_html=True)
+    st.subheader(title)
+
+
 def _cramers_v(feature, target):
     observed = pd.crosstab(feature, target).to_numpy(dtype=float)
     n = observed.sum()
@@ -47,28 +53,17 @@ def render_notebook_eda_page(
 ):
     """Render the unique EDA figures from the latest report notebook."""
 
-    st.header("🧭 Additional Notebook EDA")
+    st.header("🧭 More EDA")
     st.caption(
-        "These interactive figures follow Sections 5.3 and 5.7–5.16 of the "
-        "latest report notebook. Repeated figures are intentionally omitted."
+        "Explore additional interactive patterns from the project analysis. "
+        "Hover, zoom and select legend items to inspect each chart."
     )
     st.button(
         "← Return to interactive Data Exploration",
+        key="back_to_explore_link",
         on_click=go_to_page,
         args=(explore_page_name,),
     )
-
-    with st.expander("Why some notebook charts are not repeated here"):
-        st.markdown(
-            """
-- **5.1 class balance** is already represented by the obesity distribution chart.
-- **5.2 numeric distributions** are available through the histogram dropdown.
-- **5.4, 5.5 and 5.17 scatterplots** are reproducible through the X/Y selectors.
-- **5.6 numeric correlation** is already available through the interactive correlation chart.
-- The two-dimensional **5.16 pivot tables** are available through the OLAP explorer; only the
-  three-dimensional gender × transport × class drill-down is retained below.
-"""
-        )
 
     short_labels = {
         "Insufficient_Weight": "Insufficient",
@@ -84,7 +79,7 @@ def render_notebook_eda_page(
     eda_df["Severity_Rank"] = eda_df["Obesity_Level"].map(severity_mapping)
 
     # 5.3 Gender composition across obesity classes.
-    st.subheader("5.3 Gender composition across obesity classes")
+    _section("Gender composition across obesity classes")
     gender_counts = (
         pd.crosstab(eda_df["Obesity_Level"], eda_df["Gender"])
         .reindex(obesity_order, fill_value=0)
@@ -135,7 +130,7 @@ def render_notebook_eda_page(
     )
 
     # 5.7 Pearson versus Spearman.
-    st.subheader("5.7 Pearson versus Spearman association")
+    _section("Pearson versus Spearman association")
     severity_columns = [
         "Age", "Height", "Weight", "BMI", "Vegetable_Consumption_Freq",
         "Main_Meals_Per_Day", "Daily_Water_Intake", "Physical_Activity_Freq",
@@ -180,7 +175,7 @@ def render_notebook_eda_page(
     )
 
     # 5.8 Lifestyle profiles.
-    st.subheader("5.8 Lifestyle profile by obesity class")
+    _section("Lifestyle profile by obesity class")
     lifestyle_columns = [
         "Vegetable_Consumption_Freq", "Main_Meals_Per_Day", "Daily_Water_Intake",
         "Physical_Activity_Freq", "Technology_Usage_Time",
@@ -226,7 +221,7 @@ def render_notebook_eda_page(
     )
 
     # 5.9 Cramer's V.
-    st.subheader("5.9 Bias-corrected Cramer’s V ranking")
+    _section("Bias-corrected Cramer’s V ranking")
     categorical_features = [
         "Gender", "Family_History_Overweight", "Frequent_High_Caloric_Food",
         "Food_Between_Meals", "Smokes", "Calorie_Monitoring",
@@ -266,7 +261,7 @@ def render_notebook_eda_page(
     )
 
     # 5.10 Within-category composition.
-    st.subheader("5.10 Within-category obesity-class composition")
+    _section("Within-category obesity-class composition")
     composition_features = [
         "Family_History_Overweight", "Frequent_High_Caloric_Food",
         "Food_Between_Meals", "Transportation_Mode",
@@ -301,7 +296,7 @@ def render_notebook_eda_page(
     )
 
     # 5.11 Water and activity.
-    st.subheader("5.11 Water intake by activity level")
+    _section("Water intake by activity level")
     activity_band = pd.cut(
         eda_df["Physical_Activity_Freq"],
         bins=[-0.01, 1, 2, 3.01],
@@ -330,7 +325,7 @@ def render_notebook_eda_page(
     )
 
     # 5.12 Interaction.
-    st.subheader("5.12 Activity and technology-use interaction")
+    _section("Activity and technology-use interaction")
     technology_band = pd.cut(
         eda_df["Technology_Usage_Time"],
         bins=[-0.01, 0.75, 1.5, 2.01],
@@ -362,7 +357,7 @@ def render_notebook_eda_page(
     )
 
     # 5.13 Age composition.
-    st.subheader("5.13 Age-group and class composition")
+    _section("Age-group and class composition")
     age_counts = pd.crosstab(eda_df["Age_Group"], eda_df["Obesity_Level"]).reindex(columns=obesity_order, fill_value=0)
     age_percentages = age_counts.div(age_counts.sum(axis=1), axis=0).mul(100).rename(columns=short_labels)
     figure = px.imshow(
@@ -384,7 +379,7 @@ def render_notebook_eda_page(
     )
 
     # 5.14 Body measurements by gender.
-    st.subheader("5.14 Body measurements by gender")
+    _section("Body measurements by gender")
     body_col_1, body_col_2 = st.columns(2)
     for container, feature, axis_label in zip(
         [body_col_1, body_col_2],
@@ -405,7 +400,7 @@ def render_notebook_eda_page(
     )
 
     # 5.15 BMI ECDF.
-    st.subheader("5.15 BMI empirical cumulative distributions")
+    _section("BMI empirical cumulative distributions")
     figure = px.ecdf(
         eda_df,
         x="BMI",
@@ -424,7 +419,7 @@ def render_notebook_eda_page(
     )
 
     # 5.16 Three-dimensional OLAP drill-down.
-    st.subheader("5.16 Gender × transport × obesity-class drill-down")
+    _section("Gender × transport × obesity-class drill-down")
     drilldown = (
         pd.crosstab(
             [eda_df["Gender"], eda_df["Transportation_Mode"]],
@@ -453,4 +448,3 @@ def render_notebook_eda_page(
         "counts and click legend entries to isolate a class. Very small transport groups should "
         "be interpreted cautiously."
     )
-
