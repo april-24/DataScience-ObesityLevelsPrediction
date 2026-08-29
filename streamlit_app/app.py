@@ -1099,7 +1099,7 @@ with tab_explore:
 
         with chart1:
         
-            with st.container(border=True):
+            with st.container(height=560, border=True):
         
                 st.markdown("### 🍩 Obesity Level Distribution")
         
@@ -1192,7 +1192,7 @@ with tab_explore:
 
         with chart2:
 
-            with st.container(border=True):
+            with st.container(height=560, border=True):
 
                 st.markdown(
                     "### 📊 Numeric Distribution"
