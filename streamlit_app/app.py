@@ -1082,153 +1082,200 @@ with tab_explore:
         include=np.number
     ).columns.tolist()
 
+    ```python
     # ========================================================
-    # 1. PIE CHART
+    # 1 & 2. OBESITY DISTRIBUTION + HISTOGRAM
     # ========================================================
 
-    chart1, chart2 = st.columns(2)
+    # Big container holding both charts
+    with st.container(border=True):
 
-    with chart1:
+        st.markdown("## 📊 Distribution Overview")
 
-        st.markdown("### 🍩 Obesity Level Distribution")
+        chart1, chart2 = st.columns(2, gap="medium")
 
-        counts = (
-            filtered["Obesity_Level"]
-            .value_counts()
-            .reindex(obesity_order)
-            .fillna(0)
-            .reset_index()
-        )
+        # ====================================================
+        # 1. PIE CHART
+        # ====================================================
 
-        counts.columns = [
-            "Obesity_Level",
-            "Count"
-        ]
+        with chart1:
 
-        # Remove zero-count categories
-        counts = counts[counts["Count"] > 0]
+            with st.container(border=True):
 
-        fig = px.pie(
-            counts,
-            names="Obesity_Level",
-            values="Count",
-            title="Obesity Level Distribution",
-            color="Obesity_Level",
-            color_discrete_map=OBESITY_COLORS,
-            category_orders={
-                "Obesity_Level": obesity_order
-            },
-            hole=0.35
-        )
+                st.markdown(
+                    "### 🍩 Obesity Level Distribution"
+                )
 
-        fig.update_traces(
-            textinfo="percent",
-            textposition="inside",
-            hovertemplate=(
-                "<b>Obesity Level:</b> %{label}<br>"
-                "<b>Count:</b> %{value}<br>"
-                "<b>Percentage:</b> %{percent}"
-                "<extra></extra>"
-            )
-        )
+                counts = (
+                    filtered["Obesity_Level"]
+                    .value_counts()
+                    .reindex(obesity_order)
+                    .fillna(0)
+                    .reset_index()
+                )
 
-        fig.update_layout(
-            height=500,
-            legend=dict(
-                title="Obesity Level",
-                traceorder="normal"
-            )
-        )
+                counts.columns = [
+                    "Obesity_Level",
+                    "Count"
+                ]
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+                # Remove zero-count categories
+                counts = counts[
+                    counts["Count"] > 0
+                ]
 
-# ========================================================
-# 2. CLEAR HISTOGRAM
-# ========================================================
-    with chart2:
-        st.markdown("**Numeric Distribution (Histogram)**")
-    
-        numeric_cols = filtered.select_dtypes(include=np.number).columns.tolist()
-    
-        hist_col = st.selectbox(
-            "Choose a numeric column",
-            numeric_cols,
-            index=(
-                numeric_cols.index("BMI")
-                if "BMI" in numeric_cols
-                else 0
-            ),
-            key="hist_col"
-        )
-    
-        # Number of bins
-        hist_bins = st.slider(
-            "Number of bins",
-            min_value=5,
-            max_value=40,
-            value=20,
-            step=5,
-            key="hist_bins"
-        )
-    
-        # Interactive histogram
-        fig = px.histogram(
-            filtered,
-            x=hist_col,
-            nbins=hist_bins,
-            marginal="box",       # Small boxplot above histogram
-            opacity=0.85,
-            title=f"Distribution of {hist_col}"
-        )
-    
-        # Add KDE-like smooth curve using Plotly
-        # Histogram itself remains clean and easy to read
-        fig.update_traces(
-            hovertemplate=(
-                f"<b>{hist_col}</b>: %{{x}}<br>"
-                "<b>Count</b>: %{y}"
-                "<extra></extra>"
-            )
-        )
-    
-        fig.update_layout(
-            height=500,
-    
-            xaxis=dict(
-                title=hist_col,
-                showgrid=False
-            ),
-    
-            yaxis=dict(
-                title="Number of Records",
-                showgrid=True
-            ),
-    
-            bargap=0.05,
-    
-            hovermode="x unified",
-    
-            margin=dict(
-                l=50,
-                r=30,
-                t=60,
-                b=50
-            )
-        )
-    
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-    
-        st.caption(
-            "💡 The histogram shows how the selected numeric variable "
-            "is distributed across the dataset. Hover over the bars "
-            "to view the number of records in each range."
-        )
+                fig = px.pie(
+                    counts,
+                    names="Obesity_Level",
+                    values="Count",
+                    color="Obesity_Level",
+                    color_discrete_map=OBESITY_COLORS,
+                    category_orders={
+                        "Obesity_Level":
+                            obesity_order
+                    },
+                    hole=0.40
+                )
+
+                fig.update_traces(
+                    textinfo="percent",
+                    textposition="inside",
+
+                    hovertemplate=(
+                        "<b>Obesity Level:</b> %{label}<br>"
+                        "<b>Count:</b> %{value}<br>"
+                        "<b>Percentage:</b> %{percent}"
+                        "<extra></extra>"
+                    )
+                )
+
+                fig.update_layout(
+
+                    height=450,
+
+                    margin=dict(
+                        l=10,
+                        r=10,
+                        t=10,
+                        b=10
+                    ),
+
+                    legend=dict(
+                        title="Obesity Level",
+                        traceorder="normal",
+                        orientation="h",
+                        yanchor="top",
+                        y=-0.05,
+                        xanchor="center",
+                        x=0.5
+                    )
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True,
+                    config={
+                        "displayModeBar": False
+                    }
+                )
+
+        # ====================================================
+        # 2. HISTOGRAM
+        # ====================================================
+
+        with chart2:
+
+            with st.container(border=True):
+
+                st.markdown(
+                    "### 📊 Numeric Distribution"
+                )
+
+                numeric_cols = (
+                    filtered
+                    .select_dtypes(
+                        include=np.number
+                    )
+                    .columns
+                    .tolist()
+                )
+
+                hist_col = st.selectbox(
+                    "Choose a numeric column",
+                    numeric_cols,
+                    index=(
+                        numeric_cols.index("BMI")
+                        if "BMI" in numeric_cols
+                        else 0
+                    ),
+                    key="hist_col"
+                )
+
+                hist_bins = st.slider(
+                    "Number of bins",
+                    min_value=5,
+                    max_value=40,
+                    value=20,
+                    step=5,
+                    key="hist_bins"
+                )
+
+                fig = px.histogram(
+                    filtered,
+                    x=hist_col,
+                    nbins=hist_bins,
+                    marginal="box",
+                    opacity=0.85,
+                    title=f"Distribution of {hist_col}"
+                )
+
+                fig.update_traces(
+                    hovertemplate=(
+                        f"<b>{hist_col}</b>: %{{x}}<br>"
+                        "<b>Count:</b> %{y}"
+                        "<extra></extra>"
+                    )
+                )
+
+                fig.update_layout(
+
+                    height=450,
+
+                    xaxis=dict(
+                        title=hist_col,
+                        showgrid=False
+                    ),
+
+                    yaxis=dict(
+                        title="Number of Records",
+                        showgrid=True
+                    ),
+
+                    bargap=0.05,
+
+                    hovermode="x unified",
+
+                    margin=dict(
+                        l=50,
+                        r=30,
+                        t=60,
+                        b=50
+                    )
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True,
+                    config={
+                        "displayModeBar": False
+                    }
+                )
+
+                st.caption(
+                    "💡 Hover over the bars to view "
+                    "the number of records in each range."
+                )
+```
 
     # ========================================================
     # 3. SCATTERPLOT
