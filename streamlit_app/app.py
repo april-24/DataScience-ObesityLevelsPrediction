@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import streamlit as st
+import plotly.express as px
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -426,25 +427,73 @@ with tab_predict:
             st.write(RECOMMENDATIONS.get(pred_label, "Consult a healthcare professional for guidance."))
 
         with chart_col:
-            if hasattr(pipeline, "predict_proba"):
-                proba = pipeline.predict_proba(input_row)[0]
-                proba_df = pd.DataFrame({
-                    "Obesity_Level": label_encoder.classes_,
-                    "Probability": proba,
-                }).set_index("Obesity_Level").reindex(obesity_order)
+    if hasattr(pipeline, "predict_proba"):
+        proba = pipeline.predict_proba(input_row)[0]
 
-                fig, ax = plt.subplots(figsize=(7, 4.5))
-                colors = ["#C44E52" if lvl == pred_label else "#4C72B0" for lvl in proba_df.index]
-                ax.barh(proba_df.index, proba_df["Probability"], color=colors)
-                ax.set_xlabel("Predicted Probability")
-                ax.set_title(f"Class Probabilities — {chosen_model_name}")
-                ax.set_xlim(0, 1)
-                for i, v in enumerate(proba_df["Probability"]):
-                    ax.text(v + 0.01, i, f"{v:.1%}", va="center", fontsize=9)
-                plt.tight_layout()
-                st.pyplot(fig)
-            else:
-                st.info("This model does not expose class probabilities.")
+        proba_df = pd.DataFrame({
+            "Obesity_Level": label_encoder.classes_,
+            "Probability": proba,
+        }).set_index("Obesity_Level").reindex(obesity_order).reset_index()
+
+        # Convert probability to percentage for display
+        proba_df["Probability_Percent"] = proba_df["Probability"] * 100
+        proba_df["Status"] = proba_df["Obesity_Level"].apply(
+            lambda x: "Predicted" if x == pred_label else "Other"
+        )
+
+        fig = px.bar(
+            proba_df,
+            x="Probability",
+            y="Obesity_Level",
+            orientation="h",
+            color="Status",
+            color_discrete_map={
+                "Predicted": "#C44E52",
+                "Other": "#4C72B0",
+            },
+            custom_data=["Probability_Percent"],
+            title=f"Class Probabilities — {chosen_model_name}",
+            labels={
+                "Probability": "Predicted Probability",
+                "Obesity_Level": "Obesity Level",
+                "Status": "",
+            },
+        )
+
+        fig.update_traces(
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Probability: %{customdata[0]:.1f}%"
+                "<extra></extra>"
+            )
+        )
+
+        fig.update_layout(
+            xaxis=dict(
+                range=[0, 1],
+                tickformat=".0%",
+            ),
+            yaxis=dict(
+                categoryorder="array",
+                categoryarray=obesity_order,
+            ),
+            height=450,
+            hovermode="closest",
+            showlegend=False,
+            margin=dict(l=10, r=20, t=60, b=20),
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={
+                "displayModeBar": False,
+            },
+        )
+
+    else:
+        st.info("This model does not expose class probabilities.")
+
 
 # ============================================================
 # TAB 3 — DATA EXPLORATION
