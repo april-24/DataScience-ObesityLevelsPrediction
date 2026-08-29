@@ -2167,158 +2167,158 @@ with tab_performance:
 
         with roc_col:
 
-        with st.container(border=True):
-    
-            st.markdown("### Per-class ROC Curves")
-    
-            if hasattr(eval_pipeline, "predict_proba"):
-    
-                # ====================================================
-                # TRUE ORDINAL ORDER
-                # ====================================================
-                ordinal_order = [
-                    "Insufficient_Weight",
-                    "Normal_Weight",
-                    "Overweight_Level_I",
-                    "Overweight_Level_II",
-                    "Obesity_Type_I",
-                    "Obesity_Type_II",
-                    "Obesity_Type_III"
-                ]
-    
-                # Actual classes from label encoder
-                actual_classes = list(
-                    label_encoder.classes_
-                )
-    
-                # ====================================================
-                # GET ENCODED INDEX FOR EACH ORDINAL CLASS
-                # ====================================================
-                ordinal_indices = [
-                    actual_classes.index(cls)
-                    for cls in ordinal_order
-                ]
-    
-                # ====================================================
-                # GET PREDICTED PROBABILITIES
-                # ====================================================
-                y_proba = eval_pipeline.predict_proba(
-                    X_test
-                )
-    
-                # ====================================================
-                # CREATE ROC DATA
-                # ====================================================
-                roc_rows = []
-    
-                for class_name, class_index in zip(
-                    ordinal_order,
-                    ordinal_indices
-                ):
-    
-                    # Actual class vs all other classes
-                    y_true_binary = (
-                        y_test == class_index
-                    ).astype(int)
-    
-                    # Probability for this class
-                    y_score = y_proba[:, class_index]
-    
-                    # ROC
-                    fpr, tpr, _ = roc_curve(
-                        y_true_binary,
-                        y_score
+            with st.container(border=True):
+        
+                st.markdown("### Per-class ROC Curves")
+        
+                if hasattr(eval_pipeline, "predict_proba"):
+        
+                    # ====================================================
+                    # TRUE ORDINAL ORDER
+                    # ====================================================
+                    ordinal_order = [
+                        "Insufficient_Weight",
+                        "Normal_Weight",
+                        "Overweight_Level_I",
+                        "Overweight_Level_II",
+                        "Obesity_Type_I",
+                        "Obesity_Type_II",
+                        "Obesity_Type_III"
+                    ]
+        
+                    # Actual classes from label encoder
+                    actual_classes = list(
+                        label_encoder.classes_
                     )
-    
-                    # AUC
-                    roc_auc_value = auc(
-                        fpr,
-                        tpr
+        
+                    # ====================================================
+                    # GET ENCODED INDEX FOR EACH ORDINAL CLASS
+                    # ====================================================
+                    ordinal_indices = [
+                        actual_classes.index(cls)
+                        for cls in ordinal_order
+                    ]
+        
+                    # ====================================================
+                    # GET PREDICTED PROBABILITIES
+                    # ====================================================
+                    y_proba = eval_pipeline.predict_proba(
+                        X_test
                     )
-    
-                    # Store ROC points
-                    for x, y in zip(
-                        fpr,
-                        tpr
+        
+                    # ====================================================
+                    # CREATE ROC DATA
+                    # ====================================================
+                    roc_rows = []
+        
+                    for class_name, class_index in zip(
+                        ordinal_order,
+                        ordinal_indices
                     ):
-    
-                        roc_rows.append({
-                            "False Positive Rate": x,
-                            "True Positive Rate": y,
-                            "Obesity Level": class_name,
-                            "AUC": roc_auc_value
-                        })
-    
-                roc_df = pd.DataFrame(
-                    roc_rows
-                )
-    
-                # ====================================================
-                # ROC PLOT
-                # ====================================================
-                fig_roc = px.line(
-                    roc_df,
-                    x="False Positive Rate",
-                    y="True Positive Rate",
-                    color="Obesity Level",
-                    category_orders={
-                        "Obesity Level": ordinal_order
-                    },
-                    title=f"ROC Curves — {eval_model_name}",
-                    hover_data=["AUC"]
-                )
-    
-                # ====================================================
-                # RANDOM CLASSIFIER
-                # ====================================================
-                fig_roc.add_scatter(
-                    x=[0, 1],
-                    y=[0, 1],
-                    mode="lines",
-                    name="Random Classifier",
-                    line=dict(
-                        dash="dot"
+        
+                        # Actual class vs all other classes
+                        y_true_binary = (
+                            y_test == class_index
+                        ).astype(int)
+        
+                        # Probability for this class
+                        y_score = y_proba[:, class_index]
+        
+                        # ROC
+                        fpr, tpr, _ = roc_curve(
+                            y_true_binary,
+                            y_score
+                        )
+        
+                        # AUC
+                        roc_auc_value = auc(
+                            fpr,
+                            tpr
+                        )
+        
+                        # Store ROC points
+                        for x, y in zip(
+                            fpr,
+                            tpr
+                        ):
+        
+                            roc_rows.append({
+                                "False Positive Rate": x,
+                                "True Positive Rate": y,
+                                "Obesity Level": class_name,
+                                "AUC": roc_auc_value
+                            })
+        
+                    roc_df = pd.DataFrame(
+                        roc_rows
                     )
-                )
-    
-                # ====================================================
-                # AXES
-                # ====================================================
-                fig_roc.update_xaxes(
-                    range=[0, 1],
-                    title="False Positive Rate"
-                )
-    
-                fig_roc.update_yaxes(
-                    range=[0, 1],
-                    title="True Positive Rate"
-                )
-    
-                # ====================================================
-                # LAYOUT
-                # ====================================================
-                fig_roc.update_layout(
-                    height=600,
-                    hovermode="closest",
-                    margin=dict(
-                        l=20,
-                        r=20,
-                        t=70,
-                        b=80
+        
+                    # ====================================================
+                    # ROC PLOT
+                    # ====================================================
+                    fig_roc = px.line(
+                        roc_df,
+                        x="False Positive Rate",
+                        y="True Positive Rate",
+                        color="Obesity Level",
+                        category_orders={
+                            "Obesity Level": ordinal_order
+                        },
+                        title=f"ROC Curves — {eval_model_name}",
+                        hover_data=["AUC"]
                     )
-                )
-    
-                st.plotly_chart(
-                    fig_roc,
-                    use_container_width=True
-                )
-    
-            else:
-    
-                st.info(
-                    "This model does not expose class probabilities "
-                    "for ROC curves."
-                )
+        
+                    # ====================================================
+                    # RANDOM CLASSIFIER
+                    # ====================================================
+                    fig_roc.add_scatter(
+                        x=[0, 1],
+                        y=[0, 1],
+                        mode="lines",
+                        name="Random Classifier",
+                        line=dict(
+                            dash="dot"
+                        )
+                    )
+        
+                    # ====================================================
+                    # AXES
+                    # ====================================================
+                    fig_roc.update_xaxes(
+                        range=[0, 1],
+                        title="False Positive Rate"
+                    )
+        
+                    fig_roc.update_yaxes(
+                        range=[0, 1],
+                        title="True Positive Rate"
+                    )
+        
+                    # ====================================================
+                    # LAYOUT
+                    # ====================================================
+                    fig_roc.update_layout(
+                        height=600,
+                        hovermode="closest",
+                        margin=dict(
+                            l=20,
+                            r=20,
+                            t=70,
+                            b=80
+                        )
+                    )
+        
+                    st.plotly_chart(
+                        fig_roc,
+                        use_container_width=True
+                    )
+        
+                else:
+        
+                    st.info(
+                        "This model does not expose class probabilities "
+                        "for ROC curves."
+                    )
 
         # ====================================================
         # 8. CLASSIFICATION REPORT
