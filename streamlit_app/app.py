@@ -1041,17 +1041,42 @@ with tab_performance:
     with cm_col:
         st.markdown("**Confusion Matrix**")
         cm = confusion_matrix(y_test, y_pred)
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.heatmap(
-            cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_, ax=ax
+
+        cm_df = pd.DataFrame(
+            cm,
+            index=label_encoder.classes_,
+            columns=label_encoder.classes_
         )
-        ax.set_xlabel("Predicted")
-        ax.set_ylabel("Actual")
-        ax.tick_params(axis="x", rotation=45)
-        ax.tick_params(axis="y", rotation=0)
-        plt.tight_layout()
-        st.pyplot(fig)
+        
+        fig = px.imshow(
+            cm_df,
+            text_auto=True,
+            aspect="auto",
+            title=f"Confusion Matrix — {eval_model_name}",
+            labels={
+                "x": "Predicted",
+                "y": "Actual",
+                "color": "Count"
+            }
+        )
+        
+        fig.update_traces(
+            hovertemplate=(
+                "<b>Actual:</b> %{y}<br>"
+                "<b>Predicted:</b> %{x}<br>"
+                "<b>Count:</b> %{z}"
+                "<extra></extra>"
+            )
+        )
+        
+        fig.update_layout(
+            height=550
+        )
+        
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
     with roc_col:
         st.markdown("**Per-class ROC Curves**")
