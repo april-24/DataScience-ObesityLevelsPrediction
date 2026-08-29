@@ -2055,168 +2055,157 @@ with tab_performance:
         # ====================================================
         # 7. CONFUSION MATRIX + ROC CURVE
         # ====================================================
-        cm_col, roc_col = st.columns(2)
+        with cm_col:
 
-        # ----------------------------------------------------
-        # CONFUSION MATRIX
-        # ----------------------------------------------------
-        # ----------------------------------------------------
-# CONFUSION MATRIX — ORDINAL CLASS ORDER
-# ----------------------------------------------------
-with cm_col:
-
-    st.markdown("### Confusion Matrix")
-
-    # ====================================================
-    # DEFINE ORDINAL ORDER
-    # ====================================================
-    ordinal_order = [
-        "Insufficient Weight",
-        "Normal Weight",
-        "Overweight Level I",
-        "Overweight Level II",
-        "Obesity Type I",
-        "Obesity Type II",
-        "Obesity Type III"
-    ]
-
-    # Actual classes used by the encoder
-    actual_classes = list(label_encoder.classes_)
-
-    # ====================================================
-    # MATCH ORDINAL ORDER TO ACTUAL CLASSES
-    # ====================================================
-    ordered_classes = [
-        cls for cls in ordinal_order
-        if cls in actual_classes
-    ]
-
-    # If the names do not match, use encoder order
-    if len(ordered_classes) == 0:
-
-        st.warning(
-            "The predefined ordinal class names do not match the "
-            "class labels in the model. Showing the model's class order instead."
-        )
-
-        ordered_classes = actual_classes
-
-    # ====================================================
-    # CONVERT CLASS NAMES TO ENCODED LABELS
-    # ====================================================
-    ordered_indices = [
-        actual_classes.index(cls)
-        for cls in ordered_classes
-    ]
-
-    # ====================================================
-    # CREATE CONFUSION MATRIX
-    # ====================================================
-    cm = confusion_matrix(
-        y_test,
-        y_pred,
-        labels=ordered_indices
-    )
-
-    cm_df = pd.DataFrame(
-        cm,
-        index=ordered_classes,
-        columns=ordered_classes
-    )
-
-    # ====================================================
-    # PLOT
-    # ====================================================
-    fig = px.imshow(
-        cm_df,
-        text_auto=True,
-        aspect="auto",
-        title=f"Confusion Matrix — {eval_model_name}",
-        labels={
-            "x": "Predicted",
-            "y": "Actual",
-            "color": "Count"
-        }
-    )
-
-    fig.update_traces(
-        hovertemplate=(
-            "<b>Actual:</b> %{y}<br>"
-            "<b>Predicted:</b> %{x}<br>"
-            "<b>Count:</b> %{z}"
-            "<extra></extra>"
-        )
-    )
-
-    fig.update_xaxes(
-        categoryorder="array",
-        categoryarray=ordered_classes
-    )
-
-    fig.update_yaxes(
-        categoryorder="array",
-        categoryarray=ordered_classes
-    )
-
-    fig.update_layout(
-        height=600
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-        # ----------------------------------------------------
-        # ROC CURVES
-        # ----------------------------------------------------
-        with roc_col:
-
-            st.markdown("### Per-class ROC Curves")
-
-            if hasattr(eval_pipeline, "predict_proba"):
-
-                y_proba = eval_pipeline.predict_proba(
-                    X_test
+            st.markdown("### Confusion Matrix")
+        
+            # ----------------------------------------------------
+            # ORDINAL ORDER OF OBESITY CLASSES
+            # ----------------------------------------------------
+            ordinal_order = [
+                "Insufficient Weight",
+                "Normal Weight",
+                "Overweight Level I",
+                "Overweight Level II",
+                "Obesity Type I",
+                "Obesity Type II",
+                "Obesity Type III"
+            ]
+        
+            # Get the actual class names used by the label encoder
+            actual_classes = list(label_encoder.classes_)
+        
+            # Match the desired ordinal order with actual classes
+            ordered_classes = [
+                cls for cls in ordinal_order
+                if cls in actual_classes
+            ]
+        
+            # ----------------------------------------------------
+            # FALLBACK IF CLASS NAMES ARE DIFFERENT
+            # ----------------------------------------------------
+            if len(ordered_classes) == 0:
+        
+                ordered_classes = actual_classes
+        
+            # Convert class names to encoded values
+            ordered_indices = [
+                actual_classes.index(cls)
+                for cls in ordered_classes
+            ]
+        
+            # ----------------------------------------------------
+            # CONFUSION MATRIX
+            # ----------------------------------------------------
+            cm = confusion_matrix(
+                y_test,
+                y_pred,
+                labels=ordered_indices
+            )
+        
+            cm_df = pd.DataFrame(
+                cm,
+                index=ordered_classes,
+                columns=ordered_classes
+            )
+        
+            # ----------------------------------------------------
+            # PLOT CONFUSION MATRIX
+            # ----------------------------------------------------
+            fig = px.imshow(
+                cm_df,
+                text_auto=True,
+                aspect="auto",
+                title=f"Confusion Matrix — {eval_model_name}",
+                labels={
+                    "x": "Predicted",
+                    "y": "Actual",
+                    "color": "Count"
+                }
+            )
+        
+            fig.update_traces(
+                hovertemplate=(
+                    "<b>Actual:</b> %{y}<br>"
+                    "<b>Predicted:</b> %{x}<br>"
+                    "<b>Count:</b> %{z}"
+                    "<extra></extra>"
                 )
-
+            )
+        
+            fig.update_xaxes(
+                title="Predicted",
+                categoryorder="array",
+                categoryarray=ordered_classes
+            )
+        
+            fig.update_yaxes(
+                title="Actual",
+                categoryorder="array",
+                categoryarray=ordered_classes
+            )
+        
+            fig.update_layout(
+                height=600
+            )
+        
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+        
+        
+        # ========================================================
+        # ROC CURVES
+        # ========================================================
+        
+        with roc_col:
+        
+            st.markdown("### Per-class ROC Curves")
+        
+            if hasattr(eval_pipeline, "predict_proba"):
+        
+                y_proba = eval_pipeline.predict_proba(X_test)
+        
+                # ------------------------------------------------
+                # BINARY LABEL MATRIX
+                # ------------------------------------------------
                 y_test_bin = label_binarize(
                     y_test,
-                    classes=list(
-                        range(
-                            len(label_encoder.classes_)
-                        )
-                    )
+                    classes=list(range(len(label_encoder.classes_)))
                 )
-
+        
                 roc_rows = []
-
-                for i, class_name in enumerate(
-                    label_encoder.classes_
-                ):
-
+        
+                # ------------------------------------------------
+                # CALCULATE ROC FOR EACH CLASS
+                # ------------------------------------------------
+                for i, class_name in enumerate(label_encoder.classes_):
+        
                     fpr, tpr, _ = roc_curve(
                         y_test_bin[:, i],
                         y_proba[:, i]
                     )
-
+        
                     roc_auc_i = auc(
                         fpr,
                         tpr
                     )
-
+        
                     for x, y in zip(fpr, tpr):
-
+        
                         roc_rows.append({
                             "False Positive Rate": x,
                             "True Positive Rate": y,
                             "Obesity Level": class_name,
                             "AUC": roc_auc_i
                         })
-
-                roc_df = pd.DataFrame(
-                    roc_rows
-                )
-
+        
+                roc_df = pd.DataFrame(roc_rows)
+        
+                # ------------------------------------------------
+                # ROC PLOT
+                # ------------------------------------------------
                 fig = px.line(
                     roc_df,
                     x="False Positive Rate",
@@ -2225,40 +2214,38 @@ with cm_col:
                     title=f"Per-class ROC Curves — {eval_model_name}",
                     hover_data=["AUC"]
                 )
-
-                # Random classifier reference line
+        
+                # Random classifier line
                 fig.add_scatter(
                     x=[0, 1],
                     y=[0, 1],
                     mode="lines",
                     name="Random Classifier",
-                    line=dict(
-                        dash="dot"
-                    )
+                    line=dict(dash="dot")
                 )
-
+        
                 fig.update_xaxes(
                     range=[0, 1],
                     title="False Positive Rate"
                 )
-
+        
                 fig.update_yaxes(
                     range=[0, 1],
                     title="True Positive Rate"
                 )
-
+        
                 fig.update_layout(
-                    height=550,
+                    height=600,
                     hovermode="closest"
                 )
-
+        
                 st.plotly_chart(
                     fig,
                     use_container_width=True
                 )
-
+        
             else:
-
+        
                 st.info(
                     "This model does not expose class probabilities "
                     "for ROC curves."
