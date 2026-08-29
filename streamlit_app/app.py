@@ -11,13 +11,20 @@ Run locally:
 """
 
 import json
+import sys
 from pathlib import Path
+
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
 import joblib
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+
+from notebook_detail_pages import render_notebook_eda_page
 
 from sklearn.metrics import (
     classification_report,
@@ -36,7 +43,41 @@ st.set_page_config(
     page_title="Obesity Level Predictor | BMDS2003",
     page_icon="🍎",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+    .block-container {padding-top: 1.5rem; padding-bottom: 3rem;}
+    .hero-card {
+        padding: 1.6rem 1.8rem; border-radius: 22px;
+        background: linear-gradient(135deg, #fff7ed 0%, #ecfdf5 55%, #eff6ff 100%);
+        border: 1px solid rgba(15, 118, 110, .16);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, .08); margin-bottom: 1rem;
+    }
+    .hero-card h2 {margin: 0 0 .45rem 0; color: #0f766e;}
+    .hero-card p {margin: 0; color: #334155; font-size: 1.02rem;}
+    .team-card {
+        min-height: 178px; padding: 1.15rem; border-radius: 18px;
+        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .30);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, .06); text-align: center;
+    }
+    .team-icon {font-size: 2.15rem; margin-bottom: .35rem;}
+    .team-name {font-weight: 750; font-size: 1.05rem; color: var(--text-color);}
+    .team-role {font-size: .90rem; color: #0f766e; margin-top: .35rem;}
+    .insight-card {
+        padding: .9rem 1rem; border-radius: 14px; background: rgba(14, 165, 233, .07);
+        border-left: 4px solid #0ea5e9; margin: .35rem 0 1rem 0;
+    }
+    div[role="radiogroup"] {gap: .35rem;}
+    div[role="radiogroup"] label {
+        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .32);
+        padding: .35rem .7rem; border-radius: 999px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -396,19 +437,39 @@ st.caption(
 
 
 # ============================================================
-# TABS
+# HORIZONTAL PAGE NAVIGATION
 # ============================================================
 
-tab_about, tab_predict, tab_explore, tab_history, tab_performance = st.tabs(
+PAGE_ABOUT = "🏠 About"
+PAGE_EXPLORE = "📊 Data Exploration"
+PAGE_EDA_GALLERY = "🧭 More EDA"
+PAGE_PREDICT = "🔮 Prediction"
+PAGE_HISTORY = "🕒 History"
+PAGE_PERFORMANCE = "📈 Model Evaluation"
+PAGE_RESULTS = "🔬 Detailed Results"
 
-    [
-        "🏠 About",
-        "🔮 Prediction",
-        "📊 Data Exploration",
-        "🕒 History",
-        "📈 Model Performance"
-    ]
+NAVIGATION_OPTIONS = [
+    PAGE_ABOUT,
+    PAGE_EXPLORE,
+    PAGE_PREDICT,
+    PAGE_HISTORY,
+    PAGE_EDA_GALLERY,
+    PAGE_PERFORMANCE,
+    PAGE_RESULTS,
+]
 
+
+def go_to_page(page_name):
+    """Navigation callback used by the in-page 'view more' buttons."""
+    st.session_state["main_navigation"] = page_name
+
+
+active_page = st.radio(
+    "Main navigation",
+    NAVIGATION_OPTIONS,
+    horizontal=True,
+    label_visibility="collapsed",
+    key="main_navigation",
 )
 
 
@@ -416,10 +477,17 @@ tab_about, tab_predict, tab_explore, tab_history, tab_performance = st.tabs(
 # TAB 1 — ABOUT
 # ============================================================
 
-with tab_about:
+if active_page == PAGE_ABOUT:
 
-    st.header(
-        "About This Project"
+    st.markdown(
+        """
+        <div class="hero-card">
+            <h2>🍎 Obesity Level Prediction</h2>
+            <p>An interactive BMDS2003 data-science project that connects lifestyle,
+            eating habits and physical condition with seven obesity-level categories.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns(
@@ -464,7 +532,8 @@ attributes.
         st.markdown(
             """
 - **Source:** UCI Machine Learning Repository
-- **Records:** 2,111 respondents
+- **Source records:** 2,111 respondents
+- **Cleaned modelling records:** 2,087
 - **Features:** 16 predictive features
 - **Target:** `Obesity_Level`
 - **Classes:** 7 obesity categories
@@ -492,20 +561,27 @@ attributes.
 
     with col2:
 
-        st.subheader(
-            "Team"
-        )
+        st.subheader("Meet the Team")
 
-        st.markdown(
-            """
-| Member | Model |
-|---|---|
-| Kyra | Decision Tree |
-| Liping | Random Forest |
-| Wenhsuan | SVM |
-| Gladys | KNN |
-"""
-        )
+        team_members = [
+            ("🌳", "Kyra Aerin Leong", "Decision Tree"),
+            ("🌲", "Low Li Ping", "Random Forest"),
+            ("📐", "Wong Wen Hsuan", "Support Vector Machine"),
+            ("🧭", "Gladys Lee", "K-Nearest Neighbours"),
+        ]
+
+        for icon, full_name, model_name in team_members:
+            st.markdown(
+                f"""
+                <div class="team-card">
+                    <div class="team-icon">{icon}</div>
+                    <div class="team-name">{full_name}</div>
+                    <div class="team-role">Model focus: {model_name}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.write("")
 
         st.subheader(
             "Best Model"
@@ -539,7 +615,7 @@ attributes.
 # TAB 2 — PREDICTION
 # ============================================================
 
-with tab_predict:
+if active_page == PAGE_PREDICT:
 
     st.header(
         "🔮 Predict an Obesity Level"
@@ -1445,7 +1521,7 @@ with tab_predict:
 # TAB 3 — DATA EXPLORATION
 # ============================================================
 
-with tab_explore:
+if active_page == PAGE_EXPLORE:
 
     st.header(
         "📊 Data Exploration"
@@ -1456,6 +1532,13 @@ with tab_explore:
     st.caption(
         f"Cleaned dataset: "
         f"{df.shape[0]} rows × {df.shape[1]} columns"
+    )
+
+    st.button(
+        "🧭 Open the additional notebook EDA",
+        on_click=go_to_page,
+        args=(PAGE_EDA_GALLERY,),
+        help="View the meaningful notebook charts that are not reproduced by the dropdown explorers below.",
     )
 
 
@@ -1485,6 +1568,8 @@ with tab_explore:
     # ========================================================
     # FILTERS
     # ========================================================
+
+    st.markdown('<div id="global-filters"></div>', unsafe_allow_html=True)
 
     st.subheader(
         "🔎 Filters"
@@ -1741,6 +1826,8 @@ with tab_explore:
                     }
 
                 )
+
+        st.markdown("[⬆ Change the global filters](#global-filters)")
 
 
         # ----------------------------------------------------
@@ -2045,6 +2132,8 @@ with tab_explore:
 
             )
 
+    st.markdown("[⬆ Change the global filters](#global-filters)")
+
 
     # ========================================================
     # HEATMAP
@@ -2110,6 +2199,8 @@ with tab_explore:
         use_container_width=True
 
     )
+
+    st.markdown("[⬆ Change the global filters](#global-filters)")
 
 
     # ========================================================
@@ -2262,6 +2353,8 @@ with tab_explore:
 
         )
 
+        st.markdown("[⬆ Change the global filters](#global-filters)")
+
     else:
 
         st.warning(
@@ -2270,10 +2363,25 @@ with tab_explore:
 
 
 # ============================================================
+# PAGE — ADDITIONAL NOTEBOOK EDA
+# ============================================================
+
+if active_page == PAGE_EDA_GALLERY:
+    render_notebook_eda_page(
+        df=load_cleaned_data(),
+        obesity_order=obesity_order,
+        obesity_colors=OBESITY_COLORS,
+        metadata=metadata,
+        go_to_page=go_to_page,
+        explore_page_name=PAGE_EXPLORE,
+    )
+
+
+# ============================================================
 # TAB 4 — HISTORY
 # ============================================================
 
-with tab_history:
+if active_page == PAGE_HISTORY:
 
     st.header(
         "🕒 Prediction History"
@@ -2439,10 +2547,17 @@ with tab_history:
 # TAB 5 — MODEL PERFORMANCE
 # ============================================================
 
-with tab_performance:
+if active_page == PAGE_PERFORMANCE:
 
     st.header(
         "📈 Model Performance"
+    )
+
+    st.button(
+        "🔬 Open detailed model diagnostics",
+        on_click=go_to_page,
+        args=(PAGE_RESULTS,),
+        help="View additional notebook-style diagnostics without repeating the charts on this page.",
     )
 
 
@@ -2485,10 +2600,9 @@ with tab_performance:
 
     st.caption(
 
-        "`Train_Accuracy_InSample` is the model scored on the "
-        "same rows it was fitted on. `Train_Accuracy_CV` is based "
-        "on held-out training folds and is more meaningful for "
-        "checking generalisation."
+        "`Train_Accuracy` is measured on the same rows used for fitting. "
+        "`CV_Mean_Accuracy` is averaged across held-out training folds, "
+        "while `Test_Accuracy` is measured once on the final test set."
 
     )
 
@@ -2517,11 +2631,11 @@ with tab_performance:
 
         "Test_Accuracy",
 
-        "Precision_Weighted",
+        "Precision_Macro",
 
-        "Recall_Weighted",
+        "Recall_Macro",
 
-        "F1_Weighted"
+        "F1_Macro"
 
     ]
 
@@ -2572,6 +2686,13 @@ with tab_performance:
 
         )
 
+        outer_long["Metric"] = outer_long["Metric"].replace({
+            "Test_Accuracy": "Test accuracy",
+            "Precision_Macro": "Macro precision",
+            "Recall_Macro": "Macro recall",
+            "F1_Macro": "Macro F1",
+        })
+
 
         fig = px.bar(
 
@@ -2585,7 +2706,7 @@ with tab_performance:
 
             barmode="group",
 
-            title="Model Performance Comparison"
+            title="Notebook Outer Comparison — Test Accuracy and Macro Metrics"
 
         )
 
@@ -2659,7 +2780,7 @@ with tab_performance:
 
         accuracy_columns = [
 
-            "Train_Accuracy_CV",
+            "CV_Mean_Accuracy",
 
             "Test_Accuracy"
 
@@ -2700,6 +2821,11 @@ with tab_performance:
                 value_name="Accuracy"
 
             )
+
+            accuracy_long["Dataset"] = accuracy_long["Dataset"].replace({
+                "CV_Mean_Accuracy": "CV mean accuracy",
+                "Test_Accuracy": "Test accuracy",
+            })
 
 
             fig = px.bar(
@@ -2770,7 +2896,7 @@ with tab_performance:
 
         accuracy_columns = [
 
-            "Train_Accuracy_InSample",
+            "Train_Accuracy",
 
             "Test_Accuracy"
 
@@ -2811,6 +2937,11 @@ with tab_performance:
                 value_name="Accuracy"
 
             )
+
+            accuracy_long["Dataset"] = accuracy_long["Dataset"].replace({
+                "Train_Accuracy": "Training accuracy",
+                "Test_Accuracy": "Test accuracy",
+            })
 
 
             fig = px.bar(
@@ -3702,3 +3833,217 @@ with tab_performance:
                 st.code(
                     str(e)
                 )
+
+
+# ============================================================
+# PAGE — DETAILED MODEL RESULTS
+# ============================================================
+
+if active_page == PAGE_RESULTS:
+
+    st.header("🔬 Detailed Model Results")
+    st.caption(
+        "Additional diagnostics derived from the notebook artifacts. These figures "
+        "complement the Model Evaluation page without repeating its consolidated table, "
+        "four-metric comparison, confusion matrices or ROC curves."
+    )
+    st.button(
+        "← Return to Model Evaluation",
+        on_click=go_to_page,
+        args=(PAGE_PERFORMANCE,),
+    )
+
+    try:
+        details_df = load_comparison_table()
+    except Exception as error:
+        st.error("Unable to load the saved model-comparison results.")
+        st.code(str(error))
+        st.stop()
+
+    if details_df.index.name is None:
+        details_df.index.name = "Model"
+
+    best_test_model = details_df["Test_Accuracy"].idxmax()
+    best_cv_model = details_df["CV_Macro_F1"].idxmax()
+    smallest_gap_model = details_df["Overfit_Gap"].idxmin()
+    summary_1, summary_2, summary_3 = st.columns(3)
+    summary_1.metric("Highest test accuracy", best_test_model, f"{details_df.loc[best_test_model, 'Test_Accuracy']:.2%}")
+    summary_2.metric("Highest CV macro F1", best_cv_model, f"{details_df.loc[best_cv_model, 'CV_Macro_F1']:.2%}")
+    summary_3.metric("Smallest train–test gap", smallest_gap_model, f"{details_df.loc[smallest_gap_model, 'Overfit_Gap']:.4f}")
+
+    st.subheader("1. Cross-validation performance and stability")
+    cv_chart_df = details_df.reset_index()
+    if "Model" not in cv_chart_df.columns:
+        cv_chart_df = cv_chart_df.rename(columns={cv_chart_df.columns[0]: "Model"})
+    fig_cv = px.bar(
+        cv_chart_df,
+        x="Model",
+        y="CV_Macro_F1",
+        error_y="CV_Std_Macro_F1",
+        color="Model",
+        text="CV_Macro_F1",
+        title="Five-fold CV macro F1 with ±1 standard deviation",
+    )
+    fig_cv.update_traces(
+        texttemplate="%{text:.4f}", textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Mean CV macro F1: %{y:.4f}<extra></extra>",
+    )
+    fig_cv.update_yaxes(range=[0, 1.05], tickformat=".0%")
+    fig_cv.update_layout(height=480, showlegend=False)
+    st.plotly_chart(fig_cv, use_container_width=True)
+    st.markdown(
+        '<div class="insight-card"><b>What it means:</b> Macro F1 gives every obesity class '
+        'equal weight. Taller bars indicate stronger validation performance; shorter error bars '
+        'mean the result changes less across folds. Model selection uses this validation evidence '
+        'rather than selecting from the test set alone.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("2. Generalisation and overfitting diagnostic")
+    gap_df = details_df.reset_index()
+    if "Model" not in gap_df.columns:
+        gap_df = gap_df.rename(columns={gap_df.columns[0]: "Model"})
+    fig_gap = px.scatter(
+        gap_df,
+        x="Overfit_Gap",
+        y="Test_Accuracy",
+        color="Model",
+        size="Generalisation_Ratio",
+        text="Model",
+        hover_data={
+            "Train_Accuracy": ":.4f",
+            "CV_Mean_Accuracy": ":.4f",
+            "Test_Accuracy": ":.4f",
+            "Overfit_Gap": ":.4f",
+            "Generalisation_Ratio": ":.4f",
+        },
+        title="Test performance versus train–test overfit gap",
+    )
+    fig_gap.update_traces(textposition="top center", marker=dict(opacity=.82, line=dict(width=1, color="white")))
+    fig_gap.update_xaxes(title="Overfit gap (lower is better)")
+    fig_gap.update_yaxes(title="Test accuracy (higher is better)", tickformat=".0%")
+    fig_gap.update_layout(height=520, showlegend=False)
+    st.plotly_chart(fig_gap, use_container_width=True)
+    st.markdown(
+        '<div class="insight-card"><b>What it means:</b> The preferred region is the upper-left: '
+        'high test accuracy with a small train–test gap. A perfect training score is not automatically '
+        'desirable when the corresponding test performance falls substantially.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("3. Specificity and probability-ranking quality")
+    diagnostic_metrics = ["Specificity_Macro", "AUC_Macro_OVR", "AUC_Weighted_OVR"]
+    diagnostic_long = (
+        details_df[diagnostic_metrics]
+        .reset_index()
+        .rename(columns={details_df.index.name or "index": "Model"})
+        .melt(id_vars="Model", var_name="Diagnostic", value_name="Score")
+    )
+    diagnostic_long["Diagnostic"] = diagnostic_long["Diagnostic"].replace({
+        "Specificity_Macro": "Macro specificity",
+        "AUC_Macro_OVR": "Macro ROC AUC (OvR)",
+        "AUC_Weighted_OVR": "Weighted ROC AUC (OvR)",
+    })
+    fig_diagnostic = px.bar(
+        diagnostic_long,
+        x="Model",
+        y="Score",
+        color="Diagnostic",
+        barmode="group",
+        text="Score",
+        title="Additional test-set diagnostics",
+    )
+    fig_diagnostic.update_traces(texttemplate="%{text:.4f}", textposition="outside")
+    fig_diagnostic.update_yaxes(range=[0, 1.05], tickformat=".0%")
+    fig_diagnostic.update_layout(height=500, legend=dict(orientation="h", y=-0.22, x=.5, xanchor="center"), margin=dict(b=100))
+    st.plotly_chart(fig_diagnostic, use_container_width=True)
+    st.markdown(
+        '<div class="insight-card"><b>What it means:</b> Macro specificity measures how well '
+        'the model rejects each class when that class is not the true label. One-vs-rest AUC evaluates '
+        'how well predicted probabilities rank each class above the alternatives across all possible '
+        'thresholds. These measures add information beyond the final hard-label accuracy.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("4. Cost-sensitive obesity screening threshold")
+    st.caption(
+        "Educational sensitivity analysis: Obesity Types I–III are grouped as the current "
+        "high-risk label. This is not a clinical diagnosis or a prediction of future disease."
+    )
+    fn_cost = st.slider(
+        "Illustrative cost of one false negative (false-positive cost = 1)",
+        min_value=1,
+        max_value=10,
+        value=5,
+        key="detailed_fn_cost",
+    )
+
+    if best_model_name in models and hasattr(models[best_model_name], "predict_proba"):
+        try:
+            _, threshold_X_test, _, threshold_y_test = rebuild_test_split(metadata)
+            threshold_pipeline = models[best_model_name]
+            risk_levels = ["Obesity_Type_I", "Obesity_Type_II", "Obesity_Type_III"]
+            risk_codes = label_encoder.transform(risk_levels)
+            classifier_classes = threshold_pipeline.named_steps["classifier"].classes_
+            risk_columns = [
+                int(np.where(classifier_classes == code)[0][0])
+                for code in risk_codes
+            ]
+            risk_probability = threshold_pipeline.predict_proba(threshold_X_test)[:, risk_columns].sum(axis=1)
+            true_risk = np.isin(threshold_y_test, risk_codes).astype(int)
+
+            threshold_rows = []
+            for threshold in np.round(np.arange(.10, .91, .05), 2):
+                predicted_risk = (risk_probability >= threshold).astype(int)
+                tn, fp, fn, tp = confusion_matrix(true_risk, predicted_risk, labels=[0, 1]).ravel()
+                threshold_rows.append({
+                    "Threshold": threshold,
+                    "Sensitivity": tp / (tp + fn) if tp + fn else np.nan,
+                    "Specificity": tn / (tn + fp) if tn + fp else np.nan,
+                    "Expected Cost": fn_cost * fn + fp,
+                    "TP": tp, "FP": fp, "FN": fn, "TN": tn,
+                })
+            threshold_df = pd.DataFrame(threshold_rows)
+            selected = threshold_df.sort_values(["Expected Cost", "FN", "Threshold"]).iloc[0]
+
+            t1, t2, t3, t4 = st.columns(4)
+            t1.metric("Recommended threshold", f"{selected['Threshold']:.2f}")
+            t2.metric("Sensitivity", f"{selected['Sensitivity']:.1%}")
+            t3.metric("Specificity", f"{selected['Specificity']:.1%}")
+            t4.metric("Illustrative cost", f"{selected['Expected Cost']:.0f}")
+
+            threshold_long = threshold_df.melt(
+                id_vars="Threshold",
+                value_vars=["Sensitivity", "Specificity"],
+                var_name="Measure",
+                value_name="Rate",
+            )
+            threshold_fig = px.line(
+                threshold_long,
+                x="Threshold",
+                y="Rate",
+                color="Measure",
+                markers=True,
+                title="Sensitivity–specificity trade-off",
+            )
+            threshold_fig.add_vline(
+                x=float(selected["Threshold"]),
+                line_dash="dash",
+                line_color="#DC2626",
+                annotation_text="Lowest cost",
+            )
+            threshold_fig.update_yaxes(range=[0, 1.02], tickformat=".0%")
+            threshold_fig.update_layout(height=480, legend=dict(orientation="h", y=-.18, x=.5, xanchor="center"))
+            st.plotly_chart(threshold_fig, use_container_width=True)
+            st.markdown(
+                f'<div class="insight-card"><b>What it means:</b> Lower thresholds usually catch '
+                f'more high-risk-labelled records but create more false positives. With the current '
+                f'illustrative {fn_cost}:1 cost ratio, the highlighted threshold minimises '
+                f'<code>{fn_cost} × FN + FP</code> on this held-out sample. The threshold must be '
+                f'validated externally before any real screening use.</div>',
+                unsafe_allow_html=True,
+            )
+        except Exception as error:
+            st.warning(f"Threshold analysis could not be generated: {error}")
+    else:
+        st.info("The selected model does not expose class probabilities required for threshold analysis.")
