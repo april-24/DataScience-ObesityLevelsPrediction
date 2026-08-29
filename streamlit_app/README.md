@@ -8,9 +8,8 @@ models, label encoder, metadata, cleaned dataset) is already inside `models/`.
 ```
 streamlit_app/
 ├── app.py                  <- main Streamlit application (entry point)
+├── notebook_detail_pages.py <- additional notebook EDA renderer
 ├── requirements.txt        <- pinned Python dependencies
-├── .streamlit/
-│   └── config.toml         <- theme settings
 └── models/
     ├── decision_tree_pipeline.pkl   <- baseline model (Kyra)
     ├── random_forest_pipeline.pkl   <- Model 2 (Liping)
@@ -22,14 +21,17 @@ streamlit_app/
     └── obesity_cleaned.csv          <- cleaned dataset used by the Data Exploration tab
 ```
 
-The app has **four distinct tabs** (not mixed together):
+The app has **seven horizontally arranged pages**:
 
-| Tab | What it shows |
+| Page | What it shows |
 |---|---|
-| 🏠 About | Business problem, dataset summary, CRISP-DM workflow, team/model ownership |
-| 🔮 Prediction | A form to enter a person's attributes, choose a model, and get a live prediction + probability chart + recommendation |
-| 📊 Data Exploration | Filters, histograms, pie chart, scatterplot, boxplots, correlation heatmap, and an interactive OLAP-style pivot-table builder |
-| 📈 Model Performance | Comparison table, inner (train vs test) and outer (model vs model) comparison charts, live confusion matrix + ROC curves per model |
+| 🏠 About | Project overview, dataset summary, CRISP-DM workflow, full team names and model ownership |
+| 📊 Data Exploration | Global filters, selectable distributions, scatterplot, boxplot, correlation chart and OLAP pivot explorer |
+| 🔮 Prediction | Input form, model selector, prediction probabilities and guidance |
+| 🕒 History | Session prediction history, summaries and download controls |
+| 🧭 More EDA | The unique EDA from the latest report notebook that the dropdown explorers cannot reproduce |
+| 📈 Model Evaluation | Notebook-aligned consolidated, inner and outer comparisons plus selectable model diagnostics |
+| 🔬 Detailed Results | CV stability, generalisation, AUC/specificity and cost-sensitive threshold analysis |
 
 ## 1. Run it locally first (recommended sanity check)
 
@@ -81,8 +83,8 @@ but the initial `git push` may take a little longer than usual).
 
 **Step 5 — Verify**
 
-Once deployed, click through all four tabs, submit a prediction, and check the Model
-Performance tab loads its charts. If something fails, check the "Manage app" logs panel in
+Once deployed, click through all seven pages, submit a prediction, and check the Model
+Evaluation and Detailed Results pages load their charts. If something fails, check the "Manage app" logs panel in
 Streamlit Cloud — it will point to the exact line/exception.
 
 ## Notes on reproducibility
