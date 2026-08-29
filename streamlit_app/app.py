@@ -12,6 +12,7 @@ Run locally:
 
 import json
 import sys
+import time
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
@@ -23,6 +24,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 
 from notebook_detail_pages import render_notebook_eda_page
 
@@ -70,11 +72,41 @@ st.markdown(
         padding: .9rem 1rem; border-radius: 14px; background: rgba(14, 165, 233, .07);
         border-left: 4px solid #0ea5e9; margin: .35rem 0 1rem 0;
     }
-    div[role="radiogroup"] {gap: .35rem;}
-    div[role="radiogroup"] label {
-        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .32);
-        padding: .35rem .7rem; border-radius: 999px;
+    div.st-key-main_navigation div[role="radiogroup"] {
+        gap: 1.8rem; border-bottom: 1px solid rgba(148, 163, 184, .35);
+        margin-bottom: 1.25rem;
     }
+    div.st-key-main_navigation div[role="radiogroup"] label {
+        background: transparent !important; border: 0 !important; border-radius: 0 !important;
+        padding: .45rem .15rem .65rem .15rem !important; margin-bottom: -1px;
+    }
+    div.st-key-main_navigation div[role="radiogroup"] label:has(input:checked) {
+        border-bottom: 3px solid #ff4b4b !important; font-weight: 700;
+    }
+    div.st-key-main_navigation div[role="radiogroup"] input {display: none;}
+    div.st-key-main_navigation [data-baseweb="radio"] > div:first-child {display: none !important;}
+    div.st-key-more_eda_link button, div.st-key-more_results_link button,
+    div.st-key-back_to_explore_link button, div.st-key-back_to_evaluation_link button {
+        color: #2563eb !important; background: transparent !important; border: 0 !important;
+        box-shadow: none !important; padding: 0 !important; text-decoration: underline;
+        font-weight: 600; min-height: auto;
+    }
+    div[data-testid="stPlotlyChart"] {
+        border: 1px solid rgba(148, 163, 184, .28); border-radius: 16px;
+        padding: .45rem; margin-bottom: .75rem;
+    }
+    .eda-section-gap {
+        height: 2rem; border-top: 1px solid rgba(148, 163, 184, .30);
+        margin-top: 1.7rem;
+    }
+    .predicting-message {
+        display: flex; align-items: center; justify-content: center; gap: .15rem;
+        padding: 1rem; margin: .75rem 0; color: #0f766e; font-size: 1.15rem; font-weight: 750;
+    }
+    .predicting-message .dot {animation: pulse-dot 1.1s infinite; opacity: .2;}
+    .predicting-message .dot:nth-child(2) {animation-delay: .18s;}
+    .predicting-message .dot:nth-child(3) {animation-delay: .36s;}
+    @keyframes pulse-dot {0%, 65%, 100% {opacity: .2;} 30% {opacity: 1; transform: translateY(-2px);}}
     </style>
     """,
     unsafe_allow_html=True,
@@ -453,24 +485,38 @@ NAVIGATION_OPTIONS = [
     PAGE_EXPLORE,
     PAGE_PREDICT,
     PAGE_HISTORY,
-    PAGE_EDA_GALLERY,
     PAGE_PERFORMANCE,
-    PAGE_RESULTS,
 ]
 
 
 def go_to_page(page_name):
     """Navigation callback used by the in-page 'view more' buttons."""
-    st.session_state["main_navigation"] = page_name
+    st.session_state["active_page"] = page_name
+    if page_name in NAVIGATION_OPTIONS:
+        st.session_state["main_navigation"] = page_name
 
 
-active_page = st.radio(
+def select_main_page():
+    """Synchronise the visible navigation with the active page."""
+    st.session_state["active_page"] = st.session_state["main_navigation"]
+
+
+if "main_navigation" not in st.session_state:
+    st.session_state["main_navigation"] = PAGE_ABOUT
+if "active_page" not in st.session_state:
+    st.session_state["active_page"] = st.session_state["main_navigation"]
+
+
+st.radio(
     "Main navigation",
     NAVIGATION_OPTIONS,
     horizontal=True,
     label_visibility="collapsed",
     key="main_navigation",
+    on_change=select_main_page,
 )
+
+active_page = st.session_state["active_page"]
 
 
 # ============================================================
@@ -1178,6 +1224,17 @@ if active_page == PAGE_PREDICT:
 
     if submitted:
 
+        prediction_status = st.empty()
+        prediction_status.markdown(
+            """
+            <div class="predicting-message">
+                Predicting<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        time.sleep(0.9)
+
         input_row = pd.DataFrame([{
 
             "Gender": gender,
@@ -1247,6 +1304,8 @@ if active_page == PAGE_PREDICT:
 
         except Exception as e:
 
+            prediction_status.empty()
+
             st.error(
                 "Prediction failed."
             )
@@ -1256,6 +1315,8 @@ if active_page == PAGE_PREDICT:
             )
 
             st.stop()
+
+        prediction_status.empty()
 
 
         # ====================================================
@@ -1313,6 +1374,7 @@ if active_page == PAGE_PREDICT:
         # RESULT
         # ====================================================
 
+        st.markdown('<div id="prediction-result-anchor"></div>', unsafe_allow_html=True)
         st.divider()
 
         result_col, chart_col = st.columns(
@@ -1516,6 +1578,20 @@ if active_page == PAGE_PREDICT:
                     "This model does not expose class probabilities."
                 )
 
+        components.html(
+            """
+            <script>
+            setTimeout(() => {
+                const anchor = window.parent.document.getElementById('prediction-result-anchor');
+                if (anchor) {
+                    anchor.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }
+            }, 250);
+            </script>
+            """,
+            height=0,
+        )
+
 
 # ============================================================
 # TAB 3 — DATA EXPLORATION
@@ -1533,14 +1609,6 @@ if active_page == PAGE_EXPLORE:
         f"Cleaned dataset: "
         f"{df.shape[0]} rows × {df.shape[1]} columns"
     )
-
-    st.button(
-        "🧭 Open the additional notebook EDA",
-        on_click=go_to_page,
-        args=(PAGE_EDA_GALLERY,),
-        help="View the meaningful notebook charts that are not reproduced by the dropdown explorers below.",
-    )
-
 
     # ========================================================
     # PREVIEW
@@ -2361,6 +2429,15 @@ if active_page == PAGE_EXPLORE:
             "Choose two different dimensions."
         )
 
+    st.divider()
+    st.button(
+        "More Details",
+        key="more_eda_link",
+        on_click=go_to_page,
+        args=(PAGE_EDA_GALLERY,),
+        help="Open the additional notebook EDA.",
+    )
+
 
 # ============================================================
 # PAGE — ADDITIONAL NOTEBOOK EDA
@@ -2552,14 +2629,6 @@ if active_page == PAGE_PERFORMANCE:
     st.header(
         "📈 Model Performance"
     )
-
-    st.button(
-        "🔬 Open detailed model diagnostics",
-        on_click=go_to_page,
-        args=(PAGE_RESULTS,),
-        help="View additional notebook-style diagnostics without repeating the charts on this page.",
-    )
-
 
     # ========================================================
     # LOAD COMPARISON
@@ -3834,6 +3903,15 @@ if active_page == PAGE_PERFORMANCE:
                     str(e)
                 )
 
+    st.divider()
+    st.button(
+        "More Details",
+        key="more_results_link",
+        on_click=go_to_page,
+        args=(PAGE_RESULTS,),
+        help="Open additional model diagnostics.",
+    )
+
 
 # ============================================================
 # PAGE — DETAILED MODEL RESULTS
@@ -3849,6 +3927,7 @@ if active_page == PAGE_RESULTS:
     )
     st.button(
         "← Return to Model Evaluation",
+        key="back_to_evaluation_link",
         on_click=go_to_page,
         args=(PAGE_PERFORMANCE,),
     )
@@ -3970,12 +4049,15 @@ if active_page == PAGE_RESULTS:
         "Educational sensitivity analysis: Obesity Types I–III are grouped as the current "
         "high-risk label. This is not a clinical diagnosis or a prediction of future disease."
     )
-    fn_cost = st.slider(
-        "Illustrative cost of one false negative (false-positive cost = 1)",
-        min_value=1,
-        max_value=10,
-        value=5,
-        key="detailed_fn_cost",
+    screening_threshold = st.slider(
+        "High-risk probability threshold",
+        min_value=0.10,
+        max_value=0.90,
+        value=0.50,
+        step=0.05,
+        format="%.2f",
+        key="detailed_screening_threshold",
+        help="Move the threshold to see sensitivity, specificity and error counts update.",
     )
 
     if best_model_name in models and hasattr(models[best_model_name], "predict_proba"):
@@ -4000,17 +4082,27 @@ if active_page == PAGE_RESULTS:
                     "Threshold": threshold,
                     "Sensitivity": tp / (tp + fn) if tp + fn else np.nan,
                     "Specificity": tn / (tn + fp) if tn + fp else np.nan,
-                    "Expected Cost": fn_cost * fn + fp,
+                    "Expected Cost": 5 * fn + fp,
                     "TP": tp, "FP": fp, "FN": fn, "TN": tn,
                 })
             threshold_df = pd.DataFrame(threshold_rows)
-            selected = threshold_df.sort_values(["Expected Cost", "FN", "Threshold"]).iloc[0]
+            lowest_cost = threshold_df.sort_values(["Expected Cost", "FN", "Threshold"]).iloc[0]
+            selected = threshold_df.loc[
+                np.isclose(threshold_df["Threshold"], screening_threshold)
+            ].iloc[0]
 
-            t1, t2, t3, t4 = st.columns(4)
-            t1.metric("Recommended threshold", f"{selected['Threshold']:.2f}")
+            t1, t2, t3, t4, t5 = st.columns(5)
+            t1.metric("Selected threshold", f"{selected['Threshold']:.2f}")
             t2.metric("Sensitivity", f"{selected['Sensitivity']:.1%}")
             t3.metric("Specificity", f"{selected['Specificity']:.1%}")
-            t4.metric("Illustrative cost", f"{selected['Expected Cost']:.0f}")
+            t4.metric("False negatives", f"{selected['FN']:.0f}")
+            t5.metric("False positives", f"{selected['FP']:.0f}")
+
+            st.caption(
+                f"Selected-threshold cost = {selected['Expected Cost']:.0f} using "
+                f"5 × FN + FP. The lowest illustrative cost occurs at threshold "
+                f"{lowest_cost['Threshold']:.2f}."
+            )
 
             threshold_long = threshold_df.melt(
                 id_vars="Threshold",
@@ -4030,16 +4122,16 @@ if active_page == PAGE_RESULTS:
                 x=float(selected["Threshold"]),
                 line_dash="dash",
                 line_color="#DC2626",
-                annotation_text="Lowest cost",
+                annotation_text="Selected threshold",
             )
             threshold_fig.update_yaxes(range=[0, 1.02], tickformat=".0%")
             threshold_fig.update_layout(height=480, legend=dict(orientation="h", y=-.18, x=.5, xanchor="center"))
             st.plotly_chart(threshold_fig, use_container_width=True)
             st.markdown(
                 f'<div class="insight-card"><b>What it means:</b> Lower thresholds usually catch '
-                f'more high-risk-labelled records but create more false positives. With the current '
-                f'illustrative {fn_cost}:1 cost ratio, the highlighted threshold minimises '
-                f'<code>{fn_cost} × FN + FP</code> on this held-out sample. The threshold must be '
+                f'more high-risk-labelled records but create more false positives. Move the slider '
+                f'to shift the red line and update all five values above. The displayed cost uses '
+                f'the notebook’s illustrative <code>5 × FN + FP</code> calculation. It must be '
                 f'validated externally before any real screening use.</div>',
                 unsafe_allow_html=True,
             )
