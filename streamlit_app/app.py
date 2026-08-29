@@ -1170,7 +1170,7 @@ with tab_explore:
                         x=0.5,
                         xanchor="center",
                     
-                        y=-0.20,          # Move legend DOWN
+                        y=-0.35,          # Move legend DOWN
                         yanchor="top",
                     
                         font=dict(
