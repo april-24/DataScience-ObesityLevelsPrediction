@@ -729,7 +729,7 @@ st.plotly_chart(
     use_container_width=True
 )
 
-    st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
+st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
     st.caption(
         "Build your own multidimensional summary table, similar to an OLAP cube: choose row "
         "and column dimensions, a numeric measure, and an aggregation function."
