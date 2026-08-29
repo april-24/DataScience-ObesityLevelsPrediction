@@ -2061,114 +2061,104 @@ with tab_performance:
         
         
         # ========================================================
-        # CONFUSION MATRIX
+        # CONFUSION MATRIX — ORDINAL ORDER
         # ========================================================
-        
+
         with cm_col:
         
             with st.container(border=True):
         
                 st.markdown("### Confusion Matrix")
         
-                # TEMPORARILY SHOW YOUR ACTUAL CLASS ORDER
-                st.write(
-                    "Label encoder classes:",
-                    list(label_encoder.classes_)
-                )
-        
                 # ====================================================
                 # TRUE ORDINAL ORDER
                 # ====================================================
-        
                 ordinal_order = [
-                    "Insufficient Weight",
-                    "Normal Weight",
-                    "Overweight Level I",
-                    "Overweight Level II",
-                    "Obesity Type I",
-                    "Obesity Type II",
-                    "Obesity Type III"
+                    "Insufficient_Weight",
+                    "Normal_Weight",
+                    "Overweight_Level_I",
+                    "Overweight_Level_II",
+                    "Obesity_Type_I",
+                    "Obesity_Type_II",
+                    "Obesity_Type_III"
                 ]
         
+                # Actual classes from label encoder
                 actual_classes = list(label_encoder.classes_)
         
-                # Check whether names match
-                missing_classes = [
-                    cls
+                # ====================================================
+                # CONVERT CLASS NAMES TO ENCODED LABELS
+                # ====================================================
+                ordinal_indices = [
+                    actual_classes.index(cls)
                     for cls in ordinal_order
-                    if cls not in actual_classes
                 ]
         
-                if missing_classes:
+                # ====================================================
+                # CREATE CONFUSION MATRIX
+                # ====================================================
+                cm = confusion_matrix(
+                    y_test,
+                    y_pred,
+                    labels=ordinal_indices
+                )
         
-                    st.error(
-                        "The class names in your app do not match "
-                        "the ordinal order."
+                # ====================================================
+                # DATAFRAME IN ORDINAL ORDER
+                # ====================================================
+                cm_df = pd.DataFrame(
+                    cm,
+                    index=ordinal_order,
+                    columns=ordinal_order
+                )
+        
+                # ====================================================
+                # PLOT
+                # ====================================================
+                fig_cm = px.imshow(
+                    cm_df,
+                    text_auto=True,
+                    aspect="auto",
+                    title=f"Confusion Matrix — {eval_model_name}",
+                    labels={
+                        "x": "Predicted",
+                        "y": "Actual",
+                        "color": "Count"
+                    }
+                )
+        
+                fig_cm.update_traces(
+                    hovertemplate=(
+                        "<b>Actual:</b> %{y}<br>"
+                        "<b>Predicted:</b> %{x}<br>"
+                        "<b>Count:</b> %{z}"
+                        "<extra></extra>"
                     )
+                )
         
-                    st.write(
-                        "Actual classes:",
-                        actual_classes
+                fig_cm.update_xaxes(
+                    title="Predicted",
+                    tickangle=-45
+                )
+        
+                fig_cm.update_yaxes(
+                    title="Actual"
+                )
+        
+                fig_cm.update_layout(
+                    height=600,
+                    margin=dict(
+                        l=20,
+                        r=20,
+                        t=70,
+                        b=130
                     )
+                )
         
-                else:
-        
-                    # Convert names to encoded numbers
-                    ordinal_indices = [
-                        actual_classes.index(cls)
-                        for cls in ordinal_order
-                    ]
-        
-                    # Create confusion matrix
-                    cm = confusion_matrix(
-                        y_test,
-                        y_pred,
-                        labels=ordinal_indices
-                    )
-        
-                    # Put rows and columns in ordinal order
-                    cm_df = pd.DataFrame(
-                        cm,
-                        index=ordinal_order,
-                        columns=ordinal_order
-                    )
-        
-                    # Plot
-                    fig_cm = px.imshow(
-                        cm_df,
-                        text_auto=True,
-                        aspect="auto",
-                        title=f"Confusion Matrix — {eval_model_name}",
-                        labels={
-                            "x": "Predicted",
-                            "y": "Actual",
-                            "color": "Count"
-                        }
-                    )
-        
-                    fig_cm.update_xaxes(
-                        title="Predicted",
-                        tickangle=-45
-                    )
-        
-                    fig_cm.update_yaxes(
-                        title="Actual"
-                    )
-        
-                    fig_cm.update_layout(
-                        height=600,
-                        margin=dict(
-                            l=20,
-                            r=20,
-                            t=70,
-                            b=120
-                        )
-                    )
-        
-                    st.plotly_chart(
-                        fig_cm,
-                        use_container_width=True
-                    )
+                st.plotly_chart(
+                    fig_cm,
+                    use_container_width=True
+                )
 
 
         # ========================================================
