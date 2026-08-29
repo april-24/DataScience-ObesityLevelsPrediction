@@ -730,29 +730,29 @@ st.plotly_chart(
 )
 
 st.subheader("OLAP-style Pivot Explorer (Roll-up / Drill-down)")
-    st.caption(
-        "Build your own multidimensional summary table, similar to an OLAP cube: choose row "
-        "and column dimensions, a numeric measure, and an aggregation function."
-    )
-    categorical_options = filtered.select_dtypes(exclude=np.number).columns.tolist()
-    p1, p2, p3, p4 = st.columns(4)
-    with p1:
-        row_dim = st.selectbox("Row dimension", categorical_options, index=categorical_options.index("Gender") if "Gender" in categorical_options else 0)
-    with p2:
-        col_dim = st.selectbox("Column dimension", categorical_options, index=categorical_options.index("Obesity_Level") if "Obesity_Level" in categorical_options else 0)
-    with p3:
-        measure = st.selectbox("Measure", num_options, index=num_options.index("BMI") if "BMI" in num_options else 0)
-    with p4:
-        agg_func = st.selectbox("Aggregation", ["mean", "count", "sum", "median"])
+st.caption(
+     "Build your own multidimensional summary table, similar to an OLAP cube: choose row "
+     "and column dimensions, a numeric measure, and an aggregation function."
+)
+categorical_options = filtered.select_dtypes(exclude=np.number).columns.tolist()
+p1, p2, p3, p4 = st.columns(4)
+with p1:
+    row_dim = st.selectbox("Row dimension", categorical_options, index=categorical_options.index("Gender") if "Gender" in categorical_options else 0)
+with p2:
+    col_dim = st.selectbox("Column dimension", categorical_options, index=categorical_options.index("Obesity_Level") if "Obesity_Level" in categorical_options else 0)
+with p3:
+    measure = st.selectbox("Measure", num_options, index=num_options.index("BMI") if "BMI" in num_options else 0)
+with p4:
+    agg_func = st.selectbox("Aggregation", ["mean", "count", "sum", "median"])
 
-    if row_dim != col_dim:
-        pivot = pd.pivot_table(
-            filtered, index=row_dim, columns=col_dim, values=measure,
-            aggfunc=agg_func, margins=True, margins_name="All (Roll-up)"
-        ).round(2)
-        st.dataframe(pivot, width='stretch')
-    else:
-        st.warning("Choose two different dimensions for rows and columns.")
+if row_dim != col_dim:
+    pivot = pd.pivot_table(
+        filtered, index=row_dim, columns=col_dim, values=measure,
+        aggfunc=agg_func, margins=True, margins_name="All (Roll-up)"
+    ).round(2)
+    st.dataframe(pivot, width='stretch')
+else:
+    st.warning("Choose two different dimensions for rows and columns.")
 
 # ============================================================
 # TAB 4 — MODEL PERFORMANCE
