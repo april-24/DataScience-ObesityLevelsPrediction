@@ -771,146 +771,225 @@ with tab_predict:
             [1, 1.3]
         )
 
-        # ====================================================
-        # PREDICTION RESULT
-        # ====================================================
-        with result_col:
-        
-            st.subheader("🎯 Prediction Result")
-        
-            st.metric(
-                "Predicted Obesity Level",
-                pred_label.replace("_", " ")
+        # ========================================================
+# PREDICTION
+# ========================================================
+
+if submitted:
+
+    # ----------------------------------------------------
+    # INPUT DATA
+    # ----------------------------------------------------
+
+    input_row = pd.DataFrame([{
+
+        "Gender":
+            gender,
+
+        "Age":
+            age,
+
+        "Height":
+            height,
+
+        "Weight":
+            weight,
+
+        "Family_History_Overweight":
+            family_history,
+
+        "Frequent_High_Caloric_Food":
+            favc,
+
+        "Vegetable_Consumption_Freq":
+            fcvc,
+
+        "Main_Meals_Per_Day":
+            ncp,
+
+        "Food_Between_Meals":
+            caec,
+
+        "Smokes":
+            smoke,
+
+        "Daily_Water_Intake":
+            ch2o,
+
+        "Calorie_Monitoring":
+            scc,
+
+        "Physical_Activity_Freq":
+            faf,
+
+        "Technology_Usage_Time":
+            tue,
+
+        "Alcohol_Consumption":
+            calc,
+
+        "Transportation_Mode":
+            mtrans
+
+    }])
+
+    # ----------------------------------------------------
+    # MODEL
+    # ----------------------------------------------------
+
+    pipeline = models[
+        chosen_model_name
+    ]
+
+    pred_encoded = pipeline.predict(
+        input_row
+    )[0]
+
+    pred_label = (
+        label_encoder
+        .inverse_transform(
+            [pred_encoded]
+        )[0]
+    )
+
+    # ====================================================
+    # RESULT
+    # ====================================================
+
+    st.divider()
+
+    result_col, chart_col = st.columns(
+        [1, 1.3]
+    )
+
+    # ====================================================
+    # PREDICTION RESULT
+    # ====================================================
+
+    with result_col:
+
+        st.subheader("🎯 Prediction Result")
+
+        st.metric(
+            "Predicted Obesity Level",
+            pred_label.replace("_", " ")
+        )
+
+        st.caption(
+            f"Model used: **{chosen_model_name}**"
+        )
+
+        st.markdown("**Recommendation:**")
+
+        st.write(
+            RECOMMENDATIONS.get(
+                pred_label,
+                "Consult a healthcare professional for guidance."
             )
-        
-            # ----------------------------------------------------
-            # BMI / OBESITY GAUGE IMAGE
-            # ----------------------------------------------------
-        
-            st.image(
-                "assets/bmi_obesity_gauge.png",
-                width=280
-            )
-        
-            st.metric(
-                "Computed BMI",
-                f"{bmi_value:.1f} kg/m²"
-            )
-        
-            st.caption(
-                f"Model used: **{chosen_model_name}**"
-            )
-        
-            st.markdown("**Recommendation:**")
-        
-            st.write(
-                RECOMMENDATIONS.get(
-                    pred_label,
-                    "Consult a healthcare professional for guidance."
+        )
+
+    # ====================================================
+    # CLASS PROBABILITY CHART
+    # ====================================================
+
+    with chart_col:
+
+        if hasattr(
+            pipeline,
+            "predict_proba"
+        ):
+
+            proba = pipeline.predict_proba(
+                input_row
+            )[0]
+
+            proba_df = pd.DataFrame({
+
+                "Obesity_Level":
+                    label_encoder.classes_,
+
+                "Probability":
+                    proba
+
+            })
+
+            proba_df = (
+                proba_df
+                .set_index(
+                    "Obesity_Level"
                 )
+                .reindex(
+                    obesity_order
+                )
+                .reset_index()
             )
-        # ====================================================
-        # CLASS PROBABILITY CHART
-        # ====================================================
 
-        with chart_col:
+            fig = px.bar(
+                proba_df,
 
-            if hasattr(
-                pipeline,
-                "predict_proba"
-            ):
+                x="Probability",
 
-                proba = pipeline.predict_proba(
-                    input_row
-                )[0]
+                y="Obesity_Level",
 
-                proba_df = pd.DataFrame({
+                orientation="h",
 
+                title=(
+                    f"Class Probabilities — "
+                    f"{chosen_model_name}"
+                ),
+
+                text="Probability",
+
+                category_orders={
                     "Obesity_Level":
-                        label_encoder.classes_,
-
-                    "Probability":
-                        proba
-
-                })
-
-                proba_df = (
-                    proba_df
-                    .set_index(
-                        "Obesity_Level"
-                    )
-                    .reindex(
                         obesity_order
-                    )
-                    .reset_index()
+                }
+            )
+
+            fig.update_traces(
+
+                texttemplate="%{x:.1%}",
+
+                textposition="outside",
+
+                hovertemplate=(
+                    "<b>Obesity Level:</b> %{y}<br>"
+                    "<b>Probability:</b> %{x:.2%}"
+                    "<extra></extra>"
                 )
+            )
 
-                fig = px.bar(
-                    proba_df,
+            fig.update_xaxes(
+                range=[0, 1],
+                title="Predicted Probability",
+                tickformat=".0%"
+            )
 
-                    x="Probability",
+            fig.update_yaxes(
+                title="Obesity Level"
+            )
 
-                    y="Obesity_Level",
-
-                    orientation="h",
-
-                    title=(
-                        f"Class Probabilities — "
-                        f"{chosen_model_name}"
-                    ),
-
-                    text="Probability",
-
-                    category_orders={
-                        "Obesity_Level":
-                            obesity_order
-                    }
+            fig.update_layout(
+                height=450,
+                margin=dict(
+                    l=20,
+                    r=30,
+                    t=60,
+                    b=40
                 )
+            )
 
-                fig.update_traces(
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
-                    texttemplate="%{x:.1%}",
+        else:
 
-                    textposition="outside",
-
-                    hovertemplate=(
-                        "<b>Obesity Level:</b> %{y}<br>"
-                        "<b>Probability:</b> %{x:.2%}"
-                        "<extra></extra>"
-                    )
-                )
-
-                fig.update_xaxes(
-                    range=[0, 1],
-                    title="Predicted Probability",
-                    tickformat=".0%"
-                )
-
-                fig.update_yaxes(
-                    title="Obesity Level"
-                )
-
-                fig.update_layout(
-                    height=450,
-                    margin=dict(
-                        l=20,
-                        r=30,
-                        t=60,
-                        b=40
-                    )
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-            else:
-
-                st.info(
-                    "This model does not expose "
-                    "class probabilities."
-                )
+            st.info(
+                "This model does not expose "
+                "class probabilities."
+            )
         
 # ============================================================
 # TAB 3 — DATA EXPLORATION
