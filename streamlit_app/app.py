@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import streamlit as st
-import plotly.graph_onbjects as go
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -427,66 +426,25 @@ with tab_predict:
             st.write(RECOMMENDATIONS.get(pred_label, "Consult a healthcare professional for guidance."))
 
         with chart_col:
-    if hasattr(pipeline, "predict_proba"):
-        proba = pipeline.predict_proba(input_row)[0]
+            if hasattr(pipeline, "predict_proba"):
+                proba = pipeline.predict_proba(input_row)[0]
+                proba_df = pd.DataFrame({
+                    "Obesity_Level": label_encoder.classes_,
+                    "Probability": proba,
+                }).set_index("Obesity_Level").reindex(obesity_order)
 
-        proba_df = pd.DataFrame({
-            "Obesity_Level": label_encoder.classes_,
-            "Probability": proba,
-        }).set_index("Obesity_Level").reindex(obesity_order)
-
-        # Convert probability to percentage
-        proba_df["Percentage"] = proba_df["Probability"] * 100
-
-        # Highlight predicted class
-        bar_colors = [
-            "#C44E52" if lvl == pred_label else "#4C72B0"
-            for lvl in proba_df.index
-        ]
-
-        # Interactive Plotly chart
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Bar(
-                x=proba_df["Percentage"],
-                y=[lvl.replace("_", " ") for lvl in proba_df.index],
-                orientation="h",
-
-                marker=dict(
-                    color=bar_colors
-                ),
-
-                customdata=proba_df["Probability"],
-
-                hovertemplate=(
-                    "<b>%{y}</b><br>"
-                    "Probability: %{customdata:.2%}"
-                    "<extra></extra>"
-                ),
-            )
-        )
-
-        fig.update_layout(
-            title=f"Class Probabilities — {chosen_model_name}",
-            xaxis_title="Predicted Probability (%)",
-            yaxis_title="Obesity Level",
-            xaxis=dict(
-                range=[0, 100],
-                ticksuffix="%"
-            ),
-            height=450,
-            margin=dict(l=10, r=20, t=60, b=50),
-            showlegend=False,
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-    else:
-        st.info("This model does not expose class probabilities.")
+                fig, ax = plt.subplots(figsize=(7, 4.5))
+                colors = ["#C44E52" if lvl == pred_label else "#4C72B0" for lvl in proba_df.index]
+                ax.barh(proba_df.index, proba_df["Probability"], color=colors)
+                ax.set_xlabel("Predicted Probability")
+                ax.set_title(f"Class Probabilities — {chosen_model_name}")
+                ax.set_xlim(0, 1)
+                for i, v in enumerate(proba_df["Probability"]):
+                    ax.text(v + 0.01, i, f"{v:.1%}", va="center", fontsize=9)
+                plt.tight_layout()
+                st.pyplot(fig)
+            else:
+                st.info("This model does not expose class probabilities.")
 
 # ============================================================
 # TAB 3 — DATA EXPLORATION
