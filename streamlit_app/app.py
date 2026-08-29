@@ -1082,7 +1082,6 @@ with tab_explore:
         include=np.number
     ).columns.tolist()
 
-    ```python
     # ========================================================
     # 1 & 2. OBESITY DISTRIBUTION + HISTOGRAM
     # ========================================================
@@ -1275,7 +1274,6 @@ with tab_explore:
                     "💡 Hover over the bars to view "
                     "the number of records in each range."
                 )
-```
 
     # ========================================================
     # 3. SCATTERPLOT
