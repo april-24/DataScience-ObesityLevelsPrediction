@@ -1147,7 +1147,7 @@ with tab_explore:
                     # Make pie larger
                     domain=dict(
                         x=[0.15, 0.90],
-                        y=[0.25, 0.8
+                        y=[0.25, 0.8]
                     )
                 )
         
