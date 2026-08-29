@@ -1547,203 +1547,337 @@ with tab_explore:
 # TAB 4 — MODEL PERFORMANCE
 # ============================================================
 with tab_performance:
+
     st.header("📈 Model Performance")
 
+    # ========================================================
+    # LOAD SAVED COMPARISON RESULTS
+    # ========================================================
     comparison_df = load_comparison_table()
 
+    # Make sure Model is available as a column/index
+    if comparison_df.index.name is None:
+        comparison_df.index.name = "Model"
+
+    # ========================================================
+    # 1. CONSOLIDATED COMPARISON TABLE
+    # ========================================================
     st.subheader("Consolidated Comparison Table")
+
     st.caption(
-        "`Train_Accuracy_InSample` is the model scored on the exact rows it was fit on — it is "
-        "expected to sit near/at 1.0 for flexible models (Decision Tree, KNN) and is **not** a "
-        "reliable overfitting signal by itself. `Train_Accuracy_CV` (cross-validated on held-out "
-        "training folds) is the one to trust for the overfitting check below."
-    )
-    st.dataframe(comparison_df.style.format(precision=4), width='stretch')
-
-    st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
-    outer_metrics = ["Test_Accuracy", "Precision_Weighted", "Recall_Weighted", "F1_Weighted"]
-    outer_plot_df = (
-    comparison_df[outer_metrics]
-    .reset_index()
-    .rename(columns={"index": "Model"})
-)
-    outer_long = outer_plot_df.melt(
-    id_vars="Model",
-    var_name="Metric",
-    value_name="Score"
-)
-
-    fig = px.bar(
-        outer_long,
-        x="Model",
-        y="Score",
-        color="Metric",
-        barmode="group",
-        title="Model Performance Comparison"
+        "`Train_Accuracy_InSample` is the model scored on the exact rows it was "
+        "fit on. It can be very high for flexible models and should not be used "
+        "alone as an overfitting diagnostic. `Train_Accuracy_CV` is based on "
+        "held-out training folds and is the more meaningful value for checking "
+        "generalisation."
     )
 
-    fig.update_traces(
-        hovertemplate=(
-            "<b>Model:</b> %{x}<br>"
-            "<b>Metric:</b> %{fullData.name}<br>"
-            "<b>Score:</b> %{y:.2%}"
-            "<extra></extra>"
-        )
-    )
-
-    fig.update_yaxes(
-        range=[0, 1.05],
-        title="Score"
-    )
-
-    fig.update_layout(
-        height=500
-    )
-
-    st.plotly_chart(
-        fig,
+    st.dataframe(
+        comparison_df.style.format(precision=4),
         use_container_width=True
     )
 
-    st.subheader("Inner Comparison — Train vs Test Accuracy (Overfitting Check)")
-    inner_tab1, inner_tab2 = st.tabs(["Cross-validated (trust this)", "In-sample (for transparency)"])
+    # ========================================================
+    # 2. OUTER COMPARISON — TEST SET
+    # ========================================================
+    st.subheader("Outer Comparison — Models Against Each Other (Test Set)")
 
-    with inner_tab1:
-        st.subheader("Inner Comparison — Train vs Test Accuracy")
+    outer_metrics = [
+        "Test_Accuracy",
+        "Precision_Weighted",
+        "Recall_Weighted",
+        "F1_Weighted"
+    ]
 
-        accuracy_df = (
-            comparison_df[["Train_Accuracy_CV", "Test_Accuracy"]]
+    # Check that required columns exist
+    missing_outer = [
+        col for col in outer_metrics
+        if col not in comparison_df.columns
+    ]
+
+    if missing_outer:
+        st.warning(
+            f"The comparison table is missing these columns: {missing_outer}"
+        )
+    else:
+
+        outer_plot_df = (
+            comparison_df[outer_metrics]
             .reset_index()
             .rename(columns={"index": "Model"})
         )
-        
-        accuracy_long = accuracy_df.melt(
+
+        outer_long = outer_plot_df.melt(
             id_vars="Model",
-            var_name="Dataset",
-            value_name="Accuracy"
+            var_name="Metric",
+            value_name="Score"
         )
-        
+
         fig = px.bar(
-            accuracy_long,
+            outer_long,
             x="Model",
-            y="Accuracy",
-            color="Dataset",
+            y="Score",
+            color="Metric",
             barmode="group",
-            text="Accuracy",
-            title="Train vs Test Accuracy"
+            title="Model Performance Comparison"
         )
-        
+
         fig.update_traces(
-            texttemplate="%{text:.1%}",
-            textposition="outside",
             hovertemplate=(
                 "<b>Model:</b> %{x}<br>"
-                "<b>Dataset:</b> %{fullData.name}<br>"
-                "<b>Accuracy:</b> %{y:.2%}"
+                "<b>Metric:</b> %{fullData.name}<br>"
+                "<b>Score:</b> %{y:.2%}"
                 "<extra></extra>"
             )
         )
-        
+
         fig.update_yaxes(
             range=[0, 1.05],
-            title="Accuracy",
+            title="Score",
             tickformat=".0%"
         )
-        
-        fig.update_xaxes(
-            title="Model"
-        )
-        
+
         fig.update_layout(
             height=500,
             hovermode="x unified"
         )
-        
+
         st.plotly_chart(
             fig,
             use_container_width=True
         )
-        st.caption(
-            "Each fold's model is scored on held-out rows of the training data, so this number "
-            "cannot trivially reach 1.0 through memorisation — this is the meaningful overfitting "
-            "check. All four models here show a small gap (a few percentage points either way), "
-            "indicating **no serious overfitting** once measured correctly."
-        )
 
-    with inner_tab2:
-        accuracy_df = (
-            comparison_df[["Train_Accuracy_CV", "Test_Accuracy"]]
-            .reset_index()
-            .rename(columns={"index": "Model"})
-        )
-        
-        accuracy_long = accuracy_df.melt(
-            id_vars="Model",
-            var_name="Dataset",
-            value_name="Accuracy"
-        )
-        
-        fig = px.bar(
-            accuracy_long,
-            x="Model",
-            y="Accuracy",
-            color="Dataset",
-            barmode="group",
-            text="Accuracy",
-            title="Train vs Test Accuracy"
-        )
-        
-        fig.update_traces(
-            texttemplate="%{text:.1%}",
-            textposition="outside",
-            hovertemplate=(
-                "<b>Model:</b> %{x}<br>"
-                "<b>Dataset:</b> %{fullData.name}<br>"
-                "<b>Accuracy:</b> %{y:.2%}"
-                "<extra></extra>"
-            )
-        )
-        
-        fig.update_yaxes(
-            range=[0, 1.05],
-            title="Accuracy",
-            tickformat=".0%"
-        )
-        
-        fig.update_xaxes(
-            title="Model"
-        )
-        
-        fig.update_layout(
-            height=500
-        )
-        
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-        st.caption(
-            "In-sample accuracy = fit and predict on the SAME training rows. It measures "
-            "memorisation, not generalisation, and is expected to be very high — exactly 1.0 for "
-            "the Decision Tree (unconstrained by default) and KNN (weights='distance', so every "
-            "training point's nearest neighbour during scoring is itself, at distance 0). It is "
-            "shown here for transparency, not as an overfitting diagnostic."
-        )
-
-    st.subheader("Weighted vs Macro-averaged Metrics")
-    st.caption(
-        "Weighted Recall is mathematically identical to Accuracy for any single-label multiclass "
-        "problem (not a computation quirk). Macro metrics weight every class equally regardless "
-        "of size and diverge more visibly whenever a model is weaker on specific classes — see "
-        "how much further KNN's macro scores drop below its weighted scores below."
+    # ========================================================
+    # 3. TRAIN VS TEST ACCURACY
+    # ========================================================
+    st.subheader(
+        "Inner Comparison — Train vs Test Accuracy (Overfitting Check)"
     )
-    macro_metric_tabs = st.tabs(["Precision", "Recall", "F1"])
-    for tab, metric in zip(macro_metric_tabs, ["Precision", "Recall", "F1"]):
+
+    inner_tab1, inner_tab2 = st.tabs(
+        [
+            "Cross-validated (trust this)",
+            "In-sample (for transparency)"
+        ]
+    )
+
+    # --------------------------------------------------------
+    # 3A. CROSS-VALIDATED TRAIN ACCURACY VS TEST ACCURACY
+    # --------------------------------------------------------
+    with inner_tab1:
+
+        st.subheader("Inner Comparison — Train vs Test Accuracy")
+
+        accuracy_columns = [
+            "Train_Accuracy_CV",
+            "Test_Accuracy"
+        ]
+
+        missing_accuracy = [
+            col for col in accuracy_columns
+            if col not in comparison_df.columns
+        ]
+
+        if missing_accuracy:
+
+            st.warning(
+                f"The comparison table is missing: {missing_accuracy}"
+            )
+
+        else:
+
+            accuracy_df = (
+                comparison_df[accuracy_columns]
+                .reset_index()
+                .rename(columns={"index": "Model"})
+            )
+
+            accuracy_long = accuracy_df.melt(
+                id_vars="Model",
+                var_name="Dataset",
+                value_name="Accuracy"
+            )
+
+            fig = px.bar(
+                accuracy_long,
+                x="Model",
+                y="Accuracy",
+                color="Dataset",
+                barmode="group",
+                text="Accuracy",
+                title="Cross-Validated Train vs Test Accuracy"
+            )
+
+            fig.update_traces(
+                texttemplate="%{text:.1%}",
+                textposition="outside",
+                hovertemplate=(
+                    "<b>Model:</b> %{x}<br>"
+                    "<b>Dataset:</b> %{fullData.name}<br>"
+                    "<b>Accuracy:</b> %{y:.2%}"
+                    "<extra></extra>"
+                )
+            )
+
+            fig.update_yaxes(
+                range=[0, 1.05],
+                title="Accuracy",
+                tickformat=".0%"
+            )
+
+            fig.update_xaxes(
+                title="Model"
+            )
+
+            fig.update_layout(
+                height=500,
+                hovermode="x unified"
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+            st.caption(
+                "Train accuracy here is cross-validated: each validation fold "
+                "contains rows that were not used to fit that fold's model. "
+                "This makes it a more meaningful comparison with the final "
+                "held-out test accuracy."
+            )
+
+    # --------------------------------------------------------
+    # 3B. IN-SAMPLE TRAIN ACCURACY
+    # --------------------------------------------------------
+    with inner_tab2:
+
+        st.subheader(
+            "In-sample Train Accuracy vs Test Accuracy"
+        )
+
+        accuracy_columns = [
+            "Train_Accuracy_InSample",
+            "Test_Accuracy"
+        ]
+
+        missing_accuracy = [
+            col for col in accuracy_columns
+            if col not in comparison_df.columns
+        ]
+
+        if missing_accuracy:
+
+            st.warning(
+                f"The comparison table is missing: {missing_accuracy}"
+            )
+
+        else:
+
+            accuracy_df = (
+                comparison_df[accuracy_columns]
+                .reset_index()
+                .rename(columns={"index": "Model"})
+            )
+
+            accuracy_long = accuracy_df.melt(
+                id_vars="Model",
+                var_name="Dataset",
+                value_name="Accuracy"
+            )
+
+            fig = px.bar(
+                accuracy_long,
+                x="Model",
+                y="Accuracy",
+                color="Dataset",
+                barmode="group",
+                text="Accuracy",
+                title="In-Sample Train vs Test Accuracy"
+            )
+
+            fig.update_traces(
+                texttemplate="%{text:.1%}",
+                textposition="outside",
+                hovertemplate=(
+                    "<b>Model:</b> %{x}<br>"
+                    "<b>Dataset:</b> %{fullData.name}<br>"
+                    "<b>Accuracy:</b> %{y:.2%}"
+                    "<extra></extra>"
+                )
+            )
+
+            fig.update_yaxes(
+                range=[0, 1.05],
+                title="Accuracy",
+                tickformat=".0%"
+            )
+
+            fig.update_xaxes(
+                title="Model"
+            )
+
+            fig.update_layout(
+                height=500
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+            st.caption(
+                "In-sample accuracy means the model is evaluated on the same "
+                "training rows it was fitted on. It is expected to be high for "
+                "flexible models and is shown for transparency rather than as "
+                "the main overfitting diagnostic."
+            )
+
+    # ========================================================
+    # 4. WEIGHTED VS MACRO METRICS
+    # ========================================================
+    st.subheader("Weighted vs Macro-averaged Metrics")
+
+    st.caption(
+        "Weighted averages account for the number of observations in each "
+        "class, while macro averages give every class equal importance. "
+        "A larger difference between weighted and macro scores can indicate "
+        "that performance varies across obesity classes."
+    )
+
+    macro_metric_tabs = st.tabs(
+        ["Precision", "Recall", "F1"]
+    )
+
+    for tab, metric in zip(
+        macro_metric_tabs,
+        ["Precision", "Recall", "F1"]
+    ):
+
         with tab:
+
+            weighted_col = f"{metric}_Weighted"
+            macro_col = f"{metric}_Macro"
+
+            metric_columns = [
+                weighted_col,
+                macro_col
+            ]
+
+            missing_metric = [
+                col for col in metric_columns
+                if col not in comparison_df.columns
+            ]
+
+            if missing_metric:
+
+                st.warning(
+                    f"The comparison table is missing: {missing_metric}"
+                )
+
+                continue
+
             metric_df = (
-                comparison_df[
-                    [f"{metric}_Weighted", f"{metric}_Macro"]
-                ]
+                comparison_df[metric_columns]
                 .reset_index()
                 .rename(columns={"index": "Model"})
             )
@@ -1753,11 +1887,16 @@ with tab_performance:
                 var_name="Average",
                 value_name="Score"
             )
-            
-            metric_long["Average"] = metric_long["Average"].str.replace(
-                f"{metric}_", "", regex=False
+
+            metric_long["Average"] = (
+                metric_long["Average"]
+                .str.replace(
+                    f"{metric}_",
+                    "",
+                    regex=False
+                )
             )
-            
+
             fig = px.bar(
                 metric_long,
                 x="Model",
@@ -1767,7 +1906,7 @@ with tab_performance:
                 text="Score",
                 title=f"{metric}: Weighted vs Macro"
             )
-            
+
             fig.update_traces(
                 texttemplate="%{text:.1%}",
                 textposition="outside",
@@ -1778,126 +1917,245 @@ with tab_performance:
                     "<extra></extra>"
                 )
             )
-            
+
             fig.update_yaxes(
                 range=[0, 1.05],
                 title=metric,
                 tickformat=".0%"
             )
-            
+
+            fig.update_xaxes(
+                title="Model"
+            )
+
             fig.update_layout(
                 height=450
             )
-            
+
             st.plotly_chart(
                 fig,
                 use_container_width=True
             )
 
+    # ========================================================
+    # 5. MODEL SELECTION
+    # ========================================================
     st.divider()
-    st.subheader("Live Evaluation for a Selected Model")
+
+    st.subheader("Model Evaluation")
+
     st.caption(
-        "Recomputed live on the same held-out test split used in the notebook "
-        "(identical random_state and stratification), so results match exactly."
+        "Select a model to inspect its test-set predictions, confusion "
+        "matrix, ROC curves and classification report."
     )
 
-    eval_model_name = st.selectbox(
-        "Choose a model to inspect", list(models.keys()),
-        index=list(models.keys()).index(best_model_name) if best_model_name in models else 0,
-        key="eval_model",
-    )
+    # Use the models dictionary already created in your app
+    available_models = list(models.keys())
 
-    X_train, X_test, y_train, y_test = rebuild_test_split(metadata)
-    eval_pipeline = models[eval_model_name]
-    y_pred = eval_pipeline.predict(X_test)
+    if not available_models:
 
-    st.markdown("**Weighted-average metrics**")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Test Accuracy", f"{accuracy_score(y_test, y_pred):.1%}")
-    m2.metric("Precision", f"{precision_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
-    m3.metric("Recall", f"{recall_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
-    m4.metric("F1", f"{f1_score(y_test, y_pred, average='weighted', zero_division=0):.1%}")
+        st.error("No trained models are available.")
 
-    st.markdown("**Macro-average metrics** (every class counted equally)")
-    m5, m6, m7, m8 = st.columns(4)
-    m5.metric("—", "")
-    m6.metric("Precision", f"{precision_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
-    m7.metric("Recall", f"{recall_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
-    m8.metric("F1", f"{f1_score(y_test, y_pred, average='macro', zero_division=0):.1%}")
+    else:
 
-    cm_col, roc_col = st.columns(2)
-
-    with cm_col:
-        st.markdown("**Confusion Matrix**")
-        cm = confusion_matrix(y_test, y_pred)
-
-        cm_df = pd.DataFrame(
-            cm,
-            index=label_encoder.classes_,
-            columns=label_encoder.classes_
+        default_index = (
+            available_models.index(best_model_name)
+            if best_model_name in available_models
+            else 0
         )
-        
-        fig = px.imshow(
-            cm_df,
-            text_auto=True,
-            aspect="auto",
-            title=f"Confusion Matrix — {eval_model_name}",
-            labels={
-                "x": "Predicted",
-                "y": "Actual",
-                "color": "Count"
-            }
+
+        eval_model_name = st.selectbox(
+            "Choose a model to inspect",
+            available_models,
+            index=default_index,
+            key="eval_model"
         )
-        
-        fig.update_traces(
-            hovertemplate=(
-                "<b>Actual:</b> %{y}<br>"
-                "<b>Predicted:</b> %{x}<br>"
-                "<b>Count:</b> %{z}"
-                "<extra></extra>"
+
+        # ====================================================
+        # REBUILD SAME TEST SPLIT
+        # ====================================================
+        X_train, X_test, y_train, y_test = rebuild_test_split(
+            metadata
+        )
+
+        eval_pipeline = models[eval_model_name]
+
+        # Predict
+        y_pred = eval_pipeline.predict(X_test)
+
+        # ====================================================
+        # 6. METRICS
+        # ====================================================
+        st.markdown("### Test-Set Metrics")
+
+        # IMPORTANT:
+        # Use the SAVED comparison table for the displayed metrics.
+        # This prevents the numbers shown here from differing from
+        # the Consolidated Comparison Table.
+
+        if eval_model_name in comparison_df.index:
+
+            selected_row = comparison_df.loc[eval_model_name]
+
+            m1, m2, m3, m4 = st.columns(4)
+
+            m1.metric(
+                "Test Accuracy",
+                f"{selected_row['Test_Accuracy']:.1%}"
             )
-        )
-        
-        fig.update_layout(
-            height=550
-        )
-        
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
 
+            m2.metric(
+                "Precision",
+                f"{selected_row['Precision_Weighted']:.1%}"
+            )
+
+            m3.metric(
+                "Recall",
+                f"{selected_row['Recall_Weighted']:.1%}"
+            )
+
+            m4.metric(
+                "F1",
+                f"{selected_row['F1_Weighted']:.1%}"
+            )
+
+            st.markdown(
+                "**Macro-average metrics** "
+                "(every class counted equally)"
+            )
+
+            m5, m6, m7, m8 = st.columns(4)
+
+            m5.metric(
+                "—",
+                ""
+            )
+
+            m6.metric(
+                "Precision",
+                f"{selected_row['Precision_Macro']:.1%}"
+            )
+
+            m7.metric(
+                "Recall",
+                f"{selected_row['Recall_Macro']:.1%}"
+            )
+
+            m8.metric(
+                "F1",
+                f"{selected_row['F1_Macro']:.1%}"
+            )
+
+        else:
+
+            st.warning(
+                f"'{eval_model_name}' was not found in the comparison table."
+            )
+
+        # ====================================================
+        # 7. CONFUSION MATRIX + ROC CURVE
+        # ====================================================
+        cm_col, roc_col = st.columns(2)
+
+        # ----------------------------------------------------
+        # CONFUSION MATRIX
+        # ----------------------------------------------------
+        with cm_col:
+
+            st.markdown("### Confusion Matrix")
+
+            cm = confusion_matrix(
+                y_test,
+                y_pred
+            )
+
+            cm_df = pd.DataFrame(
+                cm,
+                index=label_encoder.classes_,
+                columns=label_encoder.classes_
+            )
+
+            fig = px.imshow(
+                cm_df,
+                text_auto=True,
+                aspect="auto",
+                title=f"Confusion Matrix — {eval_model_name}",
+                labels={
+                    "x": "Predicted",
+                    "y": "Actual",
+                    "color": "Count"
+                }
+            )
+
+            fig.update_traces(
+                hovertemplate=(
+                    "<b>Actual:</b> %{y}<br>"
+                    "<b>Predicted:</b> %{x}<br>"
+                    "<b>Count:</b> %{z}"
+                    "<extra></extra>"
+                )
+            )
+
+            fig.update_layout(
+                height=550
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+        # ----------------------------------------------------
+        # ROC CURVES
+        # ----------------------------------------------------
         with roc_col:
-            st.markdown("**Per-class ROC Curves**")
+
+            st.markdown("### Per-class ROC Curves")
 
             if hasattr(eval_pipeline, "predict_proba"):
-                y_proba = eval_pipeline.predict_proba(X_test)
+
+                y_proba = eval_pipeline.predict_proba(
+                    X_test
+                )
+
                 y_test_bin = label_binarize(
                     y_test,
-                    classes=list(range(len(label_encoder.classes_)))
+                    classes=list(
+                        range(
+                            len(label_encoder.classes_)
+                        )
+                    )
                 )
 
                 roc_rows = []
-    
-                for i, class_name in enumerate(label_encoder.classes_):
-    
+
+                for i, class_name in enumerate(
+                    label_encoder.classes_
+                ):
+
                     fpr, tpr, _ = roc_curve(
                         y_test_bin[:, i],
                         y_proba[:, i]
                     )
-    
-                    roc_auc_i = auc(fpr, tpr)
-    
+
+                    roc_auc_i = auc(
+                        fpr,
+                        tpr
+                    )
+
                     for x, y in zip(fpr, tpr):
+
                         roc_rows.append({
                             "False Positive Rate": x,
                             "True Positive Rate": y,
                             "Obesity Level": class_name,
                             "AUC": roc_auc_i
                         })
-    
-                roc_df = pd.DataFrame(roc_rows)
-    
+
+                roc_df = pd.DataFrame(
+                    roc_rows
+                )
+
                 fig = px.line(
                     roc_df,
                     x="False Positive Rate",
@@ -1906,125 +2164,154 @@ with tab_performance:
                     title=f"Per-class ROC Curves — {eval_model_name}",
                     hover_data=["AUC"]
                 )
-    
+
                 # Random classifier reference line
                 fig.add_scatter(
                     x=[0, 1],
                     y=[0, 1],
                     mode="lines",
                     name="Random Classifier",
-                    line=dict(dash="dot")
+                    line=dict(
+                        dash="dot"
+                    )
                 )
-    
+
                 fig.update_xaxes(
                     range=[0, 1],
                     title="False Positive Rate"
                 )
-    
+
                 fig.update_yaxes(
                     range=[0, 1],
                     title="True Positive Rate"
                 )
-    
+
                 fig.update_layout(
                     height=550,
                     hovermode="closest"
                 )
-    
+
                 st.plotly_chart(
                     fig,
                     use_container_width=True
                 )
-    
+
             else:
+
                 st.info(
-                    "This model does not expose class probabilities for ROC curves."
+                    "This model does not expose class probabilities "
+                    "for ROC curves."
                 )
-    
-        with st.expander("Full classification report"):
-    
+
+        # ====================================================
+        # 8. CLASSIFICATION REPORT
+        # ====================================================
+        with st.expander(
+            f"Full Classification Report — {eval_model_name}"
+        ):
+
             report = classification_report(
                 y_test,
                 y_pred,
                 target_names=label_encoder.classes_,
                 zero_division=0,
-                output_dict=True,
+                output_dict=True
             )
-    
+
+            report_df = pd.DataFrame(
+                report
+            ).T.round(3)
+
             st.dataframe(
-                pd.DataFrame(report).T.round(3),
-                width="stretch"
+                report_df,
+                use_container_width=True
             )
 
-    # RANDOM FOREST — FEATURE IMPORTANCE
-    if eval_model_name == "Random Forest":
+    # ========================================================
+    # 9. RANDOM FOREST FEATURE IMPORTANCE
+    # ========================================================
+    if (
+        "eval_model_name" in locals()
+        and eval_model_name == "Random Forest"
+    ):
 
-        st.subheader("Random Forest — Feature Importance")
+        st.divider()
 
-        feature_names = (
-            eval_pipeline
-            .named_steps["preprocessor"]
-            .get_feature_names_out()
+        st.subheader(
+            "Random Forest — Feature Importance"
         )
 
-        importances = (
-            eval_pipeline
-            .named_steps["classifier"]
-            .feature_importances_
-        )
+        try:
 
-        importance_df = pd.DataFrame({
-            "Feature": feature_names,
-            "Importance": importances
-        })
-
-        importance_df = (
-            importance_df
-            .sort_values("Importance", ascending=False)
-            .head(15)
-            .sort_values("Importance", ascending=True)
-        )
-
-        fig = px.bar(
-            importance_df,
-            x="Importance",
-            y="Feature",
-            orientation="h",
-            title="Top 15 Random Forest Feature Importances",
-            text="Importance"
-        )
-
-        fig.update_traces(
-            texttemplate="%{text:.3f}",
-            textposition="outside",
-            hovertemplate=(
-                "<b>Feature:</b> %{y}<br>"
-                "<b>Importance:</b> %{x:.3f}"
-                "<extra></extra>"
+            feature_names = (
+                eval_pipeline
+                .named_steps["preprocessor"]
+                .get_feature_names_out()
             )
-        )
 
-        fig.update_xaxes(
-            title="Feature Importance"
-        )
+            importances = (
+                eval_pipeline
+                .named_steps["classifier"]
+                .feature_importances_
+            )
 
-        fig.update_yaxes(
-            title="Feature"
-        )
+            importance_df = pd.DataFrame({
+                "Feature": feature_names,
+                "Importance": importances
+            })
 
-        fig.update_layout(
-            height=600
-        )
+            importance_df = (
+                importance_df
+                .sort_values(
+                    "Importance",
+                    ascending=False
+                )
+                .head(15)
+                .sort_values(
+                    "Importance",
+                    ascending=True
+                )
+            )
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+            fig = px.bar(
+                importance_df,
+                x="Importance",
+                y="Feature",
+                orientation="h",
+                title="Top 15 Random Forest Feature Importances",
+                text="Importance"
+            )
 
+            fig.update_traces(
+                texttemplate="%{text:.3f}",
+                textposition="outside",
+                hovertemplate=(
+                    "<b>Feature:</b> %{y}<br>"
+                    "<b>Importance:</b> %{x:.3f}"
+                    "<extra></extra>"
+                )
+            )
 
-st.divider()
+            fig.update_xaxes(
+                title="Feature Importance"
+            )
 
-st.caption(
-    "BMDS2003 Data Science — Group Project | "
-    "CRISP-DM Prototype | Built with Streamlit"
-)
+            fig.update_yaxes(
+                title="Feature"
+            )
+
+            fig.update_layout(
+                height=600
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+        except Exception as e:
+
+            st.warning(
+                "Unable to display Random Forest feature importance."
+            )
+            st.code(str(e))
