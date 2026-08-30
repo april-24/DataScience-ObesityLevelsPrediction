@@ -107,6 +107,46 @@ st.markdown(
     .predicting-message .dot:nth-child(2) {animation-delay: .18s;}
     .predicting-message .dot:nth-child(3) {animation-delay: .36s;}
     @keyframes pulse-dot {0%, 65%, 100% {opacity: .2;} 30% {opacity: 1; transform: translateY(-2px);}}
+    .prediction-section-title {
+        display: flex; align-items: center; gap: .55rem; margin: .05rem 0 .15rem 0;
+        font-size: 1.35rem; font-weight: 800; color: var(--text-color);
+    }
+    .prediction-section-note {color: #64748b; margin: 0 0 .8rem 0; font-size: .92rem;}
+    .input-visual {
+        min-height: 82px; margin-top: .45rem; padding: .7rem .8rem; border-radius: 14px;
+        background: rgba(248, 250, 252, .82); border: 1px solid rgba(148, 163, 184, .24);
+        text-align: center;
+    }
+    .input-visual-label {font-size: .82rem; color: #64748b; margin-top: .35rem; font-weight: 650;}
+    .icon-row {display: flex; justify-content: center; align-items: center; gap: .55rem; min-height: 34px;}
+    .meter-icon {font-size: 1.65rem; filter: grayscale(1); opacity: .23; transition: all .2s ease;}
+    .meter-icon.active {filter: none; opacity: 1; transform: translateY(-2px);}
+    .visual-progress {height: 7px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin-top: .55rem;}
+    .visual-progress > span {display: block; height: 100%; border-radius: inherit;}
+    .frequency-row {display: flex; gap: .3rem; justify-content: center; flex-wrap: wrap;}
+    .frequency-step {
+        padding: .25rem .48rem; border-radius: 999px; border: 1px solid rgba(148,163,184,.35);
+        color: #64748b; font-size: .72rem; background: var(--secondary-background-color);
+    }
+    .frequency-step.active {background: #d15353; color: white; border-color: #d15353; font-weight: 750;}
+    .profile-preview {
+        height: 100%; min-height: 365px; padding: 1rem; border-radius: 18px;
+        background: linear-gradient(180deg, rgba(248,250,252,.9), rgba(255,242,240,.75));
+        border: 1px solid rgba(148, 163, 184, .28); text-align: center;
+    }
+    .profile-preview-title {font-size: 1.05rem; font-weight: 800; color: #172033;}
+    .profile-preview-subtitle {font-size: .82rem; color: #64748b; margin-bottom: .25rem;}
+    .profile-bmi {
+        display: inline-flex; gap: .4rem; align-items: baseline; padding: .42rem .8rem;
+        border-radius: 12px; background: rgba(209,83,83,.10); color: #b53e42; margin-top: .2rem;
+    }
+    .profile-bmi strong {font-size: 1.35rem;}
+    .profile-disclaimer {font-size: .72rem; line-height: 1.35; color: #64748b; margin-top: .45rem;}
+    .status-visual {font-size: 2rem; line-height: 1;}
+    .status-chip {
+        display: inline-block; margin-top: .45rem; padding: .25rem .6rem; border-radius: 999px;
+        color: white; font-weight: 750; font-size: .78rem;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -711,6 +751,152 @@ if active_page == PAGE_PREDICT:
         )
 
 
+    def render_icon_meter(icon, value, minimum, maximum, total, label, color):
+
+        progress = float(np.clip(
+            (value - minimum) / (maximum - minimum),
+            0,
+            1,
+        ))
+
+        active_count = int(np.clip(
+            np.rint((value / maximum) * total),
+            0,
+            total,
+        )) if maximum else 0
+
+        icons = "".join(
+            f'<span class="meter-icon{" active" if i < active_count else ""}">{icon}</span>'
+            for i in range(total)
+        )
+
+        st.markdown(
+            f"""
+            <div class="input-visual">
+                <div class="icon-row">{icons}</div>
+                <div class="visual-progress">
+                    <span style="width:{progress * 100:.1f}%; background:{color};"></span>
+                </div>
+                <div class="input-visual-label">{label}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+    def render_frequency_visual(icon, selected_value, label):
+
+        steps = [
+            ("no", "Never"),
+            ("Sometimes", "Sometimes"),
+            ("Frequently", "Frequently"),
+            ("Always", "Always"),
+        ]
+
+        step_html = "".join(
+            f'<span class="frequency-step{" active" if raw == selected_value else ""}">{display}</span>'
+            for raw, display in steps
+        )
+
+        st.markdown(
+            f"""
+            <div class="input-visual">
+                <div class="status-visual">{icon}</div>
+                <div class="frequency-row">{step_html}</div>
+                <div class="input-visual-label">{label}: {freq_label(selected_value)}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+    def render_status_visual(
+        icon,
+        is_active,
+        active_label,
+        inactive_label,
+        color="#38a169",
+        inactive_color="#d15353",
+    ):
+
+        selected_label = active_label if is_active else inactive_label
+        selected_color = color if is_active else inactive_color
+
+        st.markdown(
+            f"""
+            <div class="input-visual">
+                <div class="status-visual">{icon}</div>
+                <span class="status-chip" style="background:{selected_color};">{selected_label}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+    def render_body_profile(height_value, weight_value, gender_value):
+
+        preview_bmi = weight_value / (height_value ** 2)
+
+        height_progress = float(np.clip(
+            (height_value - 1.45) / (1.98 - 1.45),
+            0,
+            1,
+        ))
+
+        height_scale = 0.86 + (0.28 * height_progress)
+
+        body_progress = float(np.clip(
+            (preview_bmi - 15.0) / (50.0 - 15.0),
+            0,
+            1,
+        ))
+
+        body_scale = 0.78 + (0.54 * body_progress)
+        shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
+        shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
+
+        st.markdown(
+            f"""
+            <div class="profile-preview">
+                <div class="profile-preview-title">Illustrative body profile</div>
+                <div class="profile-preview-subtitle">Updates from height and BMI</div>
+                <svg viewBox="0 0 330 315" width="100%" height="235" role="img"
+                     aria-label="Illustrative body profile based on the entered height and BMI">
+                    <defs>
+                        <marker id="profile-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
+                            <path d="M0,0 L7,3.5 L0,7 Z" fill="#aeb7c6"></path>
+                        </marker>
+                    </defs>
+                    <line x1="38" y1="58" x2="38" y2="274" stroke="#aeb7c6" stroke-width="3"
+                          marker-start="url(#profile-arrow)" marker-end="url(#profile-arrow)"></line>
+                    <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
+                    <ellipse cx="187" cy="286" rx="110" ry="14" fill="#e5e7eb"></ellipse>
+                    <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
+                        <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
+                        <path d="M149 75 A38 38 0 0 1 225 75 L225 63 A38 38 0 0 0 149 63 Z" fill="#384250"></path>
+                        <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
+                        <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
+                        <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
+                        <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
+                        <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
+                        <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
+                        <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
+                        <rect x="128" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="194" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                        <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                    </g>
+                </svg>
+                <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
+                <div class="profile-disclaimer">
+                    Simplified visualisation only. It is not an anatomically accurate or medical representation.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
     # ========================================================
     # AVAILABLE MODELS
     # ========================================================
@@ -793,418 +979,387 @@ if active_page == PAGE_PREDICT:
 
 
     # ========================================================
-    # FORM
+    # VISUAL INPUT SECTIONS
     # ========================================================
 
-    with st.form(
-        f"prediction_form_{reset_counter}"
-    ):
+    with st.container(border=True):
 
-        # ----------------------------------------------------
-        # PERSONAL
-        # ----------------------------------------------------
-
-        st.subheader(
-            "Personal & Physical Attributes"
+        st.markdown(
+            '<div class="prediction-section-title">👤 Personal &amp; Physical Attributes</div>'
+            '<div class="prediction-section-note">The profile preview responds to the entered height and BMI.</div>',
+            unsafe_allow_html=True,
         )
 
-        c1, c2, c3 = st.columns(3)
-
-
-        with c1:
-
-            gender = st.radio(
-
-                "Gender",
-
-                cat_meta["Gender"],
-
-                horizontal=True,
-
-                format_func=lambda x:
-                    "👩 Female"
-                    if x == "Female"
-                    else "👨 Male",
-
-                key=f"gender_{reset_counter}"
-
-            )
-
-
-            age = st.number_input(
-
-                "Age (years)",
-
-                min_value=float(
-                    num_meta["Age"]["min"]
-                ),
-
-                max_value=100.0,
-
-                value=round(
-                    num_meta["Age"]["mean"],
-                    1
-                ),
-
-                step=1.0,
-
-                key=f"age_{reset_counter}"
-
-            )
-
-
-        with c2:
-
-            height = st.number_input(
-
-                "Height (m)",
-
-                min_value=float(
-                    num_meta["Height"]["min"]
-                ),
-
-                max_value=float(
-                    num_meta["Height"]["max"]
-                ) + 0.3,
-
-                value=round(
-                    num_meta["Height"]["mean"],
-                    2
-                ),
-
-                step=0.01,
-
-                format="%.2f",
-
-                key=f"height_{reset_counter}"
-
-            )
-
-
-        with c3:
-
-            weight = st.number_input(
-
-                "Weight (kg)",
-
-                min_value=float(
-                    num_meta["Weight"]["min"]
-                ),
-
-                max_value=float(
-                    num_meta["Weight"]["max"]
-                ) + 50,
-
-                value=round(
-                    num_meta["Weight"]["mean"],
-                    1
-                ),
-
-                step=1.0,
-
-                key=f"weight_{reset_counter}"
-
-            )
-
-
-        # ----------------------------------------------------
-        # EATING HABITS
-        # ----------------------------------------------------
-
-        st.subheader(
-            "Eating Habits"
+        personal_inputs, personal_preview = st.columns(
+            [1.35, 1],
+            gap="large",
         )
 
-        c4, c5, c6 = st.columns(3)
+        with personal_inputs:
+
+            personal_row_1 = st.columns(2)
+
+            with personal_row_1[0]:
+
+                gender = st.radio(
+                    "Gender",
+                    cat_meta["Gender"],
+                    horizontal=True,
+                    format_func=lambda x: "👩 Female" if x == "Female" else "👨 Male",
+                    key=f"gender_{reset_counter}",
+                )
+
+            with personal_row_1[1]:
+
+                age = st.number_input(
+                    "Age (years)",
+                    min_value=float(num_meta["Age"]["min"]),
+                    max_value=100.0,
+                    value=round(num_meta["Age"]["mean"], 1),
+                    step=1.0,
+                    key=f"age_{reset_counter}",
+                )
+
+            personal_row_2 = st.columns(2)
+
+            with personal_row_2[0]:
+
+                height = st.number_input(
+                    "Height (m)",
+                    min_value=float(num_meta["Height"]["min"]),
+                    max_value=float(num_meta["Height"]["max"]) + 0.3,
+                    value=round(num_meta["Height"]["mean"], 2),
+                    step=0.01,
+                    format="%.2f",
+                    key=f"height_{reset_counter}",
+                )
+
+            with personal_row_2[1]:
+
+                weight = st.number_input(
+                    "Weight (kg)",
+                    min_value=float(num_meta["Weight"]["min"]),
+                    max_value=float(num_meta["Weight"]["max"]) + 50,
+                    value=round(num_meta["Weight"]["mean"], 1),
+                    step=1.0,
+                    key=f"weight_{reset_counter}",
+                )
+
+        with personal_preview:
+
+            render_body_profile(
+                height,
+                weight,
+                gender,
+            )
 
 
-        with c4:
+    st.markdown(
+        '<div class="prediction-section-title">🥗 Eating Habits</div>'
+        '<div class="prediction-section-note">Each visual reflects the selected behaviour or frequency.</div>',
+        unsafe_allow_html=True,
+    )
+
+    eating_row_1 = st.columns(3)
+
+    with eating_row_1[0]:
+
+        with st.container(border=True):
 
             family_history = st.radio(
-
                 "Family history of overweight?",
-
-                cat_meta[
-                    "Family_History_Overweight"
-                ],
-
+                cat_meta["Family_History_Overweight"],
                 horizontal=True,
-
                 format_func=yes_no_label,
-
-                key=f"family_history_{reset_counter}"
-
+                key=f"family_history_{reset_counter}",
             )
 
+            render_status_visual(
+                "👪",
+                family_history == "yes",
+                "Family history recorded",
+                "No family history recorded",
+                inactive_color="#38a169",
+            )
+
+    with eating_row_1[1]:
+
+        with st.container(border=True):
 
             favc = st.radio(
-
                 "Frequently eats high-caloric food?",
-
-                cat_meta[
-                    "Frequent_High_Caloric_Food"
-                ],
-
+                cat_meta["Frequent_High_Caloric_Food"],
                 horizontal=True,
-
                 format_func=yes_no_label,
-
-                key=f"favc_{reset_counter}"
-
+                key=f"favc_{reset_counter}",
             )
 
+            render_status_visual(
+                "🍔",
+                favc == "yes",
+                "Frequently",
+                "Not frequently",
+                color="#e79035",
+                inactive_color="#38a169",
+            )
 
-        with c5:
+    with eating_row_1[2]:
+
+        with st.container(border=True):
 
             fcvc = st.slider(
-
                 "Vegetable consumption frequency",
-
                 1.0,
-
                 3.0,
-
-                value=round(
-                    num_meta[
-                        "Vegetable_Consumption_Freq"
-                    ]["mean"],
-                    1
-                ),
-
+                value=round(num_meta["Vegetable_Consumption_Freq"]["mean"], 1),
                 step=0.1,
-
-                key=f"fcvc_{reset_counter}"
-
+                key=f"fcvc_{reset_counter}",
             )
 
+            render_icon_meter(
+                "🥬",
+                fcvc,
+                0.0,
+                3.0,
+                3,
+                f"Vegetable frequency: {fcvc:.1f} of 3",
+                "#38a169",
+            )
+
+    eating_row_2 = st.columns(3)
+
+    with eating_row_2[0]:
+
+        with st.container(border=True):
 
             ncp = st.slider(
-
                 "Number of main meals per day",
-
                 1.0,
-
                 4.0,
-
-                value=round(
-                    num_meta[
-                        "Main_Meals_Per_Day"
-                    ]["mean"],
-                    1
-                ),
-
+                value=round(num_meta["Main_Meals_Per_Day"]["mean"], 1),
                 step=0.5,
-
-                key=f"ncp_{reset_counter}"
-
+                key=f"ncp_{reset_counter}",
             )
 
+            render_icon_meter(
+                "🍽️",
+                ncp,
+                0.0,
+                4.0,
+                4,
+                f"Main meals: {ncp:.1f} per day",
+                "#e79035",
+            )
 
-        with c6:
+    with eating_row_2[1]:
+
+        with st.container(border=True):
 
             caec = st.select_slider(
-
                 "Eats food between meals?",
-
                 options=FREQUENCY_ORDER,
-
                 value="Sometimes",
-
                 format_func=freq_label,
-
-                key=f"caec_{reset_counter}"
-
+                key=f"caec_{reset_counter}",
             )
 
+            render_frequency_visual(
+                "🍪",
+                caec,
+                "Between-meal food",
+            )
+
+    with eating_row_2[2]:
+
+        with st.container(border=True):
 
             calc = st.select_slider(
-
                 "Alcohol consumption",
-
                 options=FREQUENCY_ORDER,
-
                 value="Sometimes",
-
                 format_func=freq_label,
+                key=f"calc_{reset_counter}",
+            )
 
-                key=f"calc_{reset_counter}"
-
+            render_frequency_visual(
+                "🍷",
+                calc,
+                "Alcohol consumption",
             )
 
 
-        # ----------------------------------------------------
-        # LIFESTYLE
-        # ----------------------------------------------------
+    st.markdown(
+        '<div class="prediction-section-title">🏃 Lifestyle &amp; Physical Condition</div>'
+        '<div class="prediction-section-note">Daily habits use visual levels and highlighted selections.</div>',
+        unsafe_allow_html=True,
+    )
 
-        st.subheader(
-            "Lifestyle & Physical Condition"
-        )
+    lifestyle_row_1 = st.columns(3)
 
-        c7, c8, c9 = st.columns(3)
+    with lifestyle_row_1[0]:
 
-
-        with c7:
+        with st.container(border=True):
 
             smoke = st.radio(
-
                 "Smokes?",
-
                 cat_meta["Smokes"],
-
                 horizontal=True,
-
                 format_func=yes_no_label,
-
-                key=f"smoke_{reset_counter}"
-
+                key=f"smoke_{reset_counter}",
             )
 
+            render_status_visual(
+                "🚬" if smoke == "yes" else "🚭",
+                smoke == "yes",
+                "Smokes",
+                "Does not smoke",
+                color="#e79035",
+                inactive_color="#38a169",
+            )
+
+    with lifestyle_row_1[1]:
+
+        with st.container(border=True):
 
             scc = st.radio(
-
                 "Monitors calorie intake?",
-
                 cat_meta["Calorie_Monitoring"],
-
                 horizontal=True,
-
                 format_func=yes_no_label,
-
-                key=f"scc_{reset_counter}"
-
+                key=f"scc_{reset_counter}",
             )
 
+            render_status_visual(
+                "🎯",
+                scc == "yes",
+                "Calories monitored",
+                "Not monitored",
+            )
 
-        with c8:
+    with lifestyle_row_1[2]:
+
+        with st.container(border=True):
 
             ch2o = st.slider(
-
                 "Daily water intake",
-
                 1.0,
-
                 3.0,
-
-                value=round(
-                    num_meta[
-                        "Daily_Water_Intake"
-                    ]["mean"],
-                    1
-                ),
-
+                value=round(num_meta["Daily_Water_Intake"]["mean"], 1),
                 step=0.1,
-
-                key=f"ch2o_{reset_counter}"
-
+                key=f"ch2o_{reset_counter}",
             )
 
+            render_icon_meter(
+                "💧",
+                ch2o,
+                0.0,
+                3.0,
+                3,
+                f"Water intake: {ch2o:.1f} of 3",
+                "#3975d5",
+            )
+
+    lifestyle_row_2 = st.columns(3)
+
+    with lifestyle_row_2[0]:
+
+        with st.container(border=True):
 
             faf = st.slider(
-
                 "Physical activity frequency",
-
                 0.0,
-
                 3.0,
-
-                value=round(
-                    num_meta[
-                        "Physical_Activity_Freq"
-                    ]["mean"],
-                    1
-                ),
-
+                value=round(num_meta["Physical_Activity_Freq"]["mean"], 1),
                 step=0.1,
-
-                key=f"faf_{reset_counter}"
-
+                key=f"faf_{reset_counter}",
             )
 
+            render_icon_meter(
+                "🏋️",
+                faf,
+                0.0,
+                3.0,
+                3,
+                f"Activity frequency: {faf:.1f} of 3",
+                "#7655c5",
+            )
 
-        with c9:
+    with lifestyle_row_2[1]:
+
+        with st.container(border=True):
 
             tue = st.slider(
-
                 "Technology usage time",
-
                 0.0,
-
                 2.0,
-
-                value=round(
-                    num_meta[
-                        "Technology_Usage_Time"
-                    ]["mean"],
-                    1
-                ),
-
+                value=round(num_meta["Technology_Usage_Time"]["mean"], 1),
                 step=0.1,
-
-                key=f"tue_{reset_counter}"
-
+                key=f"tue_{reset_counter}",
             )
 
+            render_icon_meter(
+                "💻",
+                tue,
+                0.0,
+                2.0,
+                2,
+                f"Technology usage: {tue:.1f} of 2",
+                "#3975d5",
+            )
+
+    with lifestyle_row_2[2]:
+
+        with st.container(border=True):
 
             mtrans = st.pills(
-
                 "Usual transportation mode",
-
-                cat_meta[
-                    "Transportation_Mode"
-                ],
-
-                default=cat_meta[
-                    "Transportation_Mode"
-                ][0],
-
-                format_func=lambda x:
-                    x.replace("_", " "),
-
-                key=f"mtrans_{reset_counter}"
-
+                cat_meta["Transportation_Mode"],
+                default=cat_meta["Transportation_Mode"][0],
+                format_func=lambda x: x.replace("_", " "),
+                key=f"mtrans_{reset_counter}",
             )
-
 
             if mtrans is None:
+                mtrans = cat_meta["Transportation_Mode"][0]
 
-                mtrans = cat_meta[
-                    "Transportation_Mode"
-                ][0]
+            transport_icons = {
+                "Automobile": "🚗",
+                "Motorbike": "🏍️",
+                "Bike": "🚲",
+                "Public_Transportation": "🚌",
+                "Walking": "🚶",
+            }
 
-
-        # ----------------------------------------------------
-        # BUTTONS
-        # ----------------------------------------------------
-
-        st.markdown("")
-
-        predict_col, restart_col = st.columns(2)
-
-
-        with predict_col:
-
-            submitted = st.form_submit_button(
-
-                "🔮 Predict Obesity Level",
-
-                type="primary",
-
-                use_container_width=True
-
+            render_status_visual(
+                transport_icons.get(mtrans, "🚌"),
+                True,
+                mtrans.replace("_", " "),
+                "",
+                color="#3975d5",
             )
 
 
-        with restart_col:
+    st.markdown("")
 
-            restart = st.form_submit_button(
+    predict_col, restart_col = st.columns(2)
 
-                "🔄 Restart",
+    with predict_col:
 
-                type="secondary",
+        submitted = st.button(
+            "🔮 Predict Obesity Level",
+            type="primary",
+            use_container_width=True,
+            key=f"predict_button_{reset_counter}",
+        )
 
-                use_container_width=True
+    with restart_col:
 
-            )
+        restart = st.button(
+            "🔄 Restart",
+            type="secondary",
+            use_container_width=True,
+            key=f"restart_button_{reset_counter}",
+        )
 
 
     # ========================================================
