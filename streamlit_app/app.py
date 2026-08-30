@@ -784,15 +784,6 @@ if active_page == PAGE_PREDICT:
             """,
             unsafe_allow_html=True,
         )
-        st.markdown(
-            f"""
-            <div class="input-visual">
-                <div class="icon-row">{icons}</div>
-                <div class="input-visual-label">{label}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
 
     def render_frequency_visual(icon, selected_value, label):
@@ -831,24 +822,6 @@ if active_page == PAGE_PREDICT:
         )
 
 
-    def render_body_profile(height_value, weight_value, gender_value):
-
-        preview_bmi = weight_value / (height_value ** 2)
-
-        height_progress = float(np.clip(
-            (height_value - 1.45) / (1.98 - 1.45),
-            0,
-            1,
-        ))
-
-        height_scale = 0.86 + (0.28 * height_progress)
-
-        body_progress = float(np.clip(
-            (preview_bmi - 15.0) / (50.0 - 15.0),
-            0,
-            1,
-        ))
-
     def render_body_profile(height_value, weight_value, gender_value, age_value=None):
 
         preview_bmi = weight_value / (height_value ** 2)
@@ -868,18 +841,8 @@ if active_page == PAGE_PREDICT:
         ))
 
         body_scale = 0.78 + (0.54 * body_progress)
-        shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
-        shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
         is_female = gender_value == "Female"
 
-        if gender_value == "Female":
-            hair_back = '<path d="M143 83 A44 44 0 0 1 231 83 L231 164 Q216 154 207 128 L167 128 Q158 154 143 164 Z" fill="#384250"></path>'
-            hair_front = '<path d="M147 80 A40 40 0 0 1 227 80 Q216 62 187 62 Q158 62 147 80 Z" fill="#384250"></path>'
-            lower_body = (
-                '<rect x="151" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
-                '<rect x="196" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
-                f'<path d="M139 204 L235 204 L264 258 Q187 275 110 258 Z" fill="{shirt_dark}"></path>'
-                f'<path d="M139 204 L235 204" stroke="{shirt_color}" stroke-width="7"></path>'
         shirt_color = "#e0629b" if is_female else "#3975d5"
         shirt_dark = "#c14c81" if is_female else "#285da9"
         skin_color = "#f0b394"
@@ -954,12 +917,6 @@ if active_page == PAGE_PREDICT:
                 f'<rect x="192" y="273" width="67" height="23" rx="10" fill="{shoe_color}"></rect>'
             )
         else:
-            hair_back = ""
-            hair_front = '<path d="M149 80 A38 38 0 0 1 225 80 L225 62 Q187 31 149 62 Z" fill="#384250"></path>'
-            lower_body = (
-                '<rect x="128" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
-                '<rect x="190" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
-                '<line x1="187" y1="216" x2="187" y2="285" stroke="#252b37" stroke-width="4"></line>'
             hair_back_svg = ""
             hair_front_svg = (
                 f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
@@ -1019,46 +976,6 @@ if active_page == PAGE_PREDICT:
 
         st.markdown(
             profile_html,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f"""
-            <div class="profile-preview">
-                <div class="profile-preview-title">Illustrative body profile</div>
-                <div class="profile-preview-subtitle">Updates from height and BMI</div>
-                <svg viewBox="0 0 330 315" width="100%" height="315" role="img"
-                     aria-label="Illustrative body profile based on the entered height and BMI">
-                    <defs>
-                        <marker id="profile-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
-                            <path d="M0,0 L7,3.5 L0,7 Z" fill="#aeb7c6"></path>
-                        </marker>
-                    </defs>
-                    <line x1="38" y1="58" x2="38" y2="274" stroke="#aeb7c6" stroke-width="3"
-                          marker-start="url(#profile-arrow)" marker-end="url(#profile-arrow)"></line>
-                    <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
-                    <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
-                    <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
-{hair_back}
-                        <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
-{hair_front}
-                        <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
-                        <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
-                        <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
-                        <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
-                        <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
-                        <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
-{lower_body}
-                        <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-                        <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-                    </g>
-                </svg>
-                <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
-                <div class="profile-disclaimer">
-                    Simplified visualisation only. It is not an anatomically accurate or medical representation.
-                </div>
-            </div>
-            """,
             unsafe_allow_html=True,
         )
 
@@ -1152,7 +1069,6 @@ if active_page == PAGE_PREDICT:
 
         st.markdown(
             '<div class="prediction-section-title">👤 Personal &amp; Physical Attributes</div>'
-            '<div class="prediction-section-note">The profile preview responds to the entered height and BMI.</div>',
         '<div class="prediction-section-note">The profile preview responds to gender, age, height and BMI.</div>',
             unsafe_allow_html=True,
         )
