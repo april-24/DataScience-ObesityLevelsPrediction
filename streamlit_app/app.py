@@ -784,15 +784,6 @@ if active_page == PAGE_PREDICT:
             """,
             unsafe_allow_html=True,
         )
-        st.markdown(
-            f"""
-            <div class="input-visual">
-                <div class="icon-row">{icons}</div>
-                <div class="input-visual-label">{label}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
 
     def render_frequency_visual(icon, selected_value, label):
@@ -850,34 +841,10 @@ if active_page == PAGE_PREDICT:
         ))
 
         body_scale = 0.78 + (0.54 * body_progress)
-        preview_bmi_display = format(preview_bmi, ".1f")
-        body_scale_display = f"{body_scale:.3f}"
-        height_scale_display = f"{height_scale:.3f}"
         shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
         shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
 
-        if gender_value == "Female":
-            hair_back = '<path d="M143 83 A44 44 0 0 1 231 83 L231 164 Q216 154 207 128 L167 128 Q158 154 143 164 Z" fill="#384250"></path>'
-            hair_front = '<path d="M147 80 A40 40 0 0 1 227 80 Q216 62 187 62 Q158 62 147 80 Z" fill="#384250"></path>'
-            lower_body = (
-                '<rect x="151" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
-                '<rect x="196" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
-                f'<path d="M139 204 L235 204 L264 258 Q187 275 110 258 Z" fill="{shirt_dark}"></path>'
-                f'<path d="M139 204 L235 204" stroke="{shirt_color}" stroke-width="7"></path>'
-            )
-        else:
-            hair_back = ""
-            hair_front = '<path d="M149 80 A38 38 0 0 1 225 80 L225 62 Q187 31 149 62 Z" fill="#384250"></path>'
-            lower_body = (
-                '<rect x="128" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
-                '<rect x="190" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
-                '<line x1="187" y1="216" x2="187" y2="285" stroke="#252b37" stroke-width="4"></line>'
-            )
-
         st.markdown(
-            f"""
-            <div class="profile-preview">
-        st.html(
             f"""
             <div class="profile-preview">
                 <div class="profile-preview-title">Illustrative body profile</div>
@@ -894,36 +861,28 @@ if active_page == PAGE_PREDICT:
                     <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
                     <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
-{hair_back}
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
-{hair_front}
-                    <g transform="translate(187 282) scale({body_scale_display} {height_scale_display}) translate(-187 -282)">
-                        <g transform="translate(0 0)">{hair_back}<circle cx="187" cy="78" r="38" fill="#f0b394"></circle>{hair_front}
+                        <path d="M149 75 A38 38 0 0 1 225 75 L225 63 A38 38 0 0 0 149 63 Z" fill="#384250"></path>
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
+                        <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
                         <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
                         <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
-{lower_body}
+                        <rect x="128" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="194" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
                         <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                         <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-                        <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>{lower_body}<rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-                        <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-                        </g>
                     </g>
                 </svg>
                 <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
-                <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi_display}</strong><span>kg/m²</span></div>
                 <div class="profile-disclaimer">
                     Simplified visualisation only. It is not an anatomically accurate or medical representation.
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
-        )
-            </div>
-            """,
         )
 
 
