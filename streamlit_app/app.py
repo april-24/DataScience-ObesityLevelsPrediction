@@ -125,7 +125,7 @@ st.markdown(
     .meter-icon.active {filter: none; opacity: 1; transform: translateY(-2px);}
     .profile-preview {
         min-height: 455px; margin-bottom: 1.15rem; padding: 1.1rem; border-radius: 18px;
-        background: var(--secondary-background-color);
+        background: #f1f2f4;
         border: 1px solid rgba(148, 163, 184, .28); text-align: center;
     }
     .profile-preview-title {font-size: 1.08rem; font-weight: 800; color: var(--text-color);}
@@ -845,41 +845,44 @@ if active_page == PAGE_PREDICT:
 
         shirt_color = "#e0629b" if is_female else "#3975d5"
         shirt_dark = "#c14c81" if is_female else "#285da9"
-        hair_color = "#3b2a20"
+        dark_hair_color = "#3b2a20"
+        white_hair_color = "#e8e6e2"
         skin_color = "#f0b394"
         pants_color = "#344054"
 
-        # Hair amount: more hair when younger, thinning toward bald with age.
+        # Hair colour greys/whitens with age (starts around 30, fully white by 70).
         if age_value is None:
-            hair_amount = 1.0
+            gray_progress = 0.0
         else:
-            hair_amount = float(np.clip(
-                (70.0 - age_value) / (70.0 - 18.0),
+            gray_progress = float(np.clip(
+                (age_value - 30.0) / (70.0 - 30.0),
                 0,
                 1,
             ))
 
-        hair_opacity = round(hair_amount, 3)
-        bald_shine_opacity = round((1 - hair_amount) * 0.45, 3)
+        dark_rgb = tuple(int(dark_hair_color[i:i + 2], 16) for i in (1, 3, 5))
+        white_rgb = tuple(int(white_hair_color[i:i + 2], 16) for i in (1, 3, 5))
+        hair_rgb = tuple(
+            round(dark_rgb[i] + (white_rgb[i] - dark_rgb[i]) * gray_progress)
+            for i in range(3)
+        )
+        hair_color = "#{:02x}{:02x}{:02x}".format(*hair_rgb)
 
-        # Short hairline cap, shared by both, with length/fringe scaled by age.
-        cap_scale_y = round(0.55 + 0.45 * hair_amount, 3)
+        # Short hairline cap, shared by both.
         hair_svg = (
-            f'<g transform="translate(187 60) scale(1 {cap_scale_y}) translate(-187 -60)" opacity="{hair_opacity}">'
+            f'<g transform="translate(187 60) translate(-187 -60)">'
             f'<path d="M150 77 A37 37 0 0 1 224 77 L224 69 Q187 39 150 69 Z" fill="{hair_color}"></path></g>'
-            f'<ellipse cx="180" cy="66" rx="15" ry="9" fill="#ffffff" opacity="{bald_shine_opacity}"></ellipse>'
         )
 
         if is_female:
-            # Long hair flowing past the shoulders, thinning/shortening with age.
-            long_hair_scale = round(0.5 + 0.5 * hair_amount, 3)
+            # Long hair flowing past the shoulders.
             hair_svg += (
-                f'<g transform="translate(187 130) scale(1 {long_hair_scale}) translate(-187 -130)" opacity="{hair_opacity}">'
+                f'<g transform="translate(187 130) translate(-187 -130)">'
                 f'<path d="M150 70 Q131 128 142 196 Q153 202 160 190 Q151 130 163 72 Z" fill="{hair_color}"></path>'
                 f'<path d="M224 70 Q243 128 232 196 Q221 202 214 190 Q223 130 211 72 Z" fill="{hair_color}"></path></g>'
             )
 
-        # Skirt for female (bare lower legs below the hem); trousers for male.
+        # Skirt for female (bare lower legs below the hem); plain trousers for male.
         if is_female:
             lower_body_svg = (
                 f'<path d="M139 207 L235 207 L262 262 L112 262 Z" fill="{shirt_dark}"></path>'
@@ -890,9 +893,8 @@ if active_page == PAGE_PREDICT:
             )
         else:
             lower_body_svg = (
-                f'<path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>'
-                f'<rect x="128" y="238" width="52" height="50" rx="13" fill="{pants_color}"></rect>'
-                f'<rect x="194" y="238" width="52" height="50" rx="13" fill="{pants_color}"></rect>'
+                f'<rect x="128" y="223" width="52" height="65" rx="13" fill="{pants_color}"></rect>'
+                f'<rect x="194" y="223" width="52" height="65" rx="13" fill="{pants_color}"></rect>'
                 f'<rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>'
                 f'<rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>'
             )
