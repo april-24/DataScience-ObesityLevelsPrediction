@@ -850,7 +850,7 @@ if active_page == PAGE_PREDICT:
         ))
 
         body_scale = 0.78 + (0.54 * body_progress)
-        preview_bmi_display = f"{preview_bmi:.1f}"
+        preview_bmi_display = format(preview_bmi, ".1f")
         body_scale_display = f"{body_scale:.3f}"
         height_scale_display = f"{height_scale:.3f}"
         shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
