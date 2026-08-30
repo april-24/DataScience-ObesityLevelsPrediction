@@ -29,12 +29,6 @@ GroupX_RSWY1S2_DataScienceProject/
         └── obesity_cleaned.csv
 ```
 
-## ⚠️ Before you submit
-
-The naming format required by the assignment spec is `GroupX_RSWY1S2_DataScienceProject.zip`.
-**Rename this top-level folder / zip** to match your actual group number and tutorial group code
-(e.g. `Group3_RSWY1S2_DataScienceProject.zip`) before submitting.
-
 ## What's in the notebook
 
 1. **Import Libraries**
