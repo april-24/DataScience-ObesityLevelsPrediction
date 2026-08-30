@@ -850,11 +850,6 @@ if active_page == PAGE_PREDICT:
         shoe_color = "#252b37"
 
         profile_age = 30.0 if age_value is None else float(age_value)
-        bald_progress = float(np.clip(
-            (profile_age - 35.0) / (80.0 - 35.0),
-            0,
-            1,
-        ))
         gray_progress = float(np.clip(
             (profile_age - 40.0) / (78.0 - 40.0),
             0,
@@ -870,41 +865,21 @@ if active_page == PAGE_PREDICT:
         )
         hair_color = "#{:02x}{:02x}{:02x}".format(*hair_rgb)
 
-        hair_width_scale = 1.0 - (0.35 * bald_progress)
-        hair_height_scale = 1.0 - (0.28 * bald_progress)
-        hair_opacity = 1.0 - (0.42 * bald_progress)
-        bald_patch_rx = 2.0 + (17.0 * bald_progress)
-        bald_patch_ry = 1.0 + (8.0 * bald_progress)
-        bald_patch_opacity = 0.92 * bald_progress
-
         preview_bmi_display = format(preview_bmi, ".1f")
         body_scale_display = format(body_scale, ".3f")
         height_scale_display = format(height_scale, ".3f")
-        hair_width_display = format(hair_width_scale, ".3f")
-        hair_height_display = format(hair_height_scale, ".3f")
-        hair_opacity_display = format(hair_opacity, ".3f")
-        bald_patch_rx_display = format(bald_patch_rx, ".2f")
-        bald_patch_ry_display = format(bald_patch_ry, ".2f")
-        bald_patch_opacity_display = format(bald_patch_opacity, ".3f")
-
-        hair_transform = (
-            f'translate(187 78) scale({hair_width_display} '
-            f'{hair_height_display}) translate(-187 -78)'
-        )
 
         if is_female:
             # A continuous rear layer fills the space behind the neck and extends
             # into long side sections. The head, neck and shirt are drawn above it.
             hair_back_svg = (
-                f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
                 f'<path d="M145 64 Q128 120 136 205 Q143 217 158 207 '
                 f'L216 207 Q231 217 238 205 Q246 120 229 64 '
-                f'Q187 35 145 64 Z" fill="{hair_color}"></path></g>'
+                f'Q187 35 145 64 Z" fill="{hair_color}"></path>'
             )
             hair_front_svg = (
-                f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
-                f'<path d="M145 79 A42 42 0 0 1 229 79 '
-                f'Q218 55 187 39 Q156 55 145 79 Z" fill="{hair_color}"></path></g>'
+                f'<path d="M142 80 A45 45 0 0 1 232 80 '
+                f'Q220 52 187 34 Q154 52 142 80 Z" fill="{hair_color}"></path>'
             )
 
             # Legs are emitted first; the skirt is drawn afterwards and covers their tops.
@@ -919,9 +894,8 @@ if active_page == PAGE_PREDICT:
         else:
             hair_back_svg = ""
             hair_front_svg = (
-                f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
                 f'<path d="M151 75 A36 36 0 0 1 223 75 L223 67 '
-                f'Q187 40 151 67 Z" fill="{hair_color}"></path></g>'
+                f'Q187 40 151 67 Z" fill="{hair_color}"></path>'
             )
 
             # The waistband overlaps the shirt and joins both trouser legs to the torso.
@@ -932,12 +906,6 @@ if active_page == PAGE_PREDICT:
                 f'<rect x="115" y="273" width="67" height="23" rx="10" fill="{shoe_color}"></rect>'
                 f'<rect x="192" y="273" width="67" height="23" rx="10" fill="{shoe_color}"></rect>'
             )
-
-        bald_patch_svg = (
-            f'<ellipse cx="187" cy="53" rx="{bald_patch_rx_display}" '
-            f'ry="{bald_patch_ry_display}" fill="{skin_color}" '
-            f'opacity="{bald_patch_opacity_display}"></ellipse>'
-        )
 
         profile_html = (
             '<div class="profile-preview">'
@@ -957,7 +925,7 @@ if active_page == PAGE_PREDICT:
             f'<g transform="translate(187 282) scale({body_scale_display} {height_scale_display}) '
             f'translate(-187 -282)">{hair_back_svg}'
             f'<circle cx="187" cy="78" r="38" fill="{skin_color}"></circle>'
-            f'{hair_front_svg}{bald_patch_svg}'
+            f'{hair_front_svg}'
             f'<rect x="173" y="107" width="28" height="25" rx="7" fill="{skin_color}"></rect>'
             f'<rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>'
             f'{lower_body_svg}'
