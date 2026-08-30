@@ -882,6 +882,7 @@ if active_page == PAGE_PREDICT:
 {hair_back}
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
 {hair_front}
+                        <g transform="translate(0 0)">{hair_back}<circle cx="187" cy="78" r="38" fill="#f0b394"></circle>{hair_front}
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
                         <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
@@ -891,6 +892,9 @@ if active_page == PAGE_PREDICT:
 {lower_body}
                         <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                         <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                        <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>{lower_body}<rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                        <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                        </g>
                     </g>
                 </svg>
                 <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
