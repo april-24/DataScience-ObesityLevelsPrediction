@@ -1,4 +1,4 @@
-**Access link: [https://datascience-obesitylevelsprediction-2vpzgfxdbnnw5kcgxfum2l.streamlit.app/](https://ds-obesitylevels-h8tbkwcgggks8jmeeqebpa.streamlit.app/)**
+**Access link: https://ds-obesitylevelsprediction.streamlit.app/**
 
 # BMDS2003 Data Science — Group Project
 ## Estimation of Obesity Levels Based on Eating Habits and Physical Condition
