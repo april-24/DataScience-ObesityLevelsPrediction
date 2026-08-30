@@ -862,7 +862,7 @@ if active_page == PAGE_PREDICT:
                     <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
-                        <path d="M149 75 A38 38 0 0 1 225 75 L225 63 A38 38 0 0 0 149 63 Z" fill="#384250"></path>
+                        <path d="M150 77 A37 37 0 0 1 224 77 L224 69 Q187 39 150 69 Z" fill="#384250"></path>
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
                         <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
