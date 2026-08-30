@@ -10,6 +10,7 @@ Run locally:
     streamlit run app.py
 """
 
+import base64
 import json
 import sys
 import time
@@ -107,6 +108,37 @@ st.markdown(
     .predicting-message .dot:nth-child(2) {animation-delay: .18s;}
     .predicting-message .dot:nth-child(3) {animation-delay: .36s;}
     @keyframes pulse-dot {0%, 65%, 100% {opacity: .2;} 30% {opacity: 1; transform: translateY(-2px);}}
+    .prediction-level-block {margin: .3rem 0 .9rem 0;}
+    .prediction-level-label {font-size: .9rem; color: var(--text-color); margin-bottom: .3rem;}
+    .prediction-level-row {display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;}
+    .prediction-level-value {font-size: 2rem; line-height: 1.2; color: var(--text-color);}
+    .cat-meme-trigger {
+        position: relative; display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ef4444;
+        color: #ef4444; background: rgba(239, 68, 68, .08); cursor: help;
+        font-size: 1rem; line-height: 1; user-select: none; outline: none;
+    }
+    .cat-meme-trigger:hover, .cat-meme-trigger:focus {
+        background: rgba(239, 68, 68, .16); transform: translateY(-1px);
+    }
+    .cat-meme-popup {
+        position: absolute; left: 0; top: calc(100% + 12px); z-index: 1000;
+        width: 230px; padding: .55rem; border-radius: 14px;
+        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .38);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, .24); color: var(--text-color);
+        visibility: hidden; opacity: 0; transform: translateY(6px);
+        transition: opacity .18s ease, transform .18s ease; pointer-events: none;
+    }
+    .cat-meme-trigger:hover .cat-meme-popup,
+    .cat-meme-trigger:focus .cat-meme-popup {
+        visibility: visible; opacity: 1; transform: translateY(0);
+    }
+    .cat-meme-popup img {
+        display: block; width: 100%; max-height: 220px; object-fit: contain;
+        border-radius: 10px; background: rgba(148, 163, 184, .10);
+    }
+    .cat-meme-caption {display: block; margin-top: .4rem; font-size: .76rem; line-height: 1.3;}
+    .cat-meme-missing {font-size: .76rem; line-height: 1.4; width: 205px;}
     .prediction-section-title {
         display: flex; align-items: center; gap: .55rem; margin: .05rem 0 .15rem 0;
         font-size: 1.35rem; font-weight: 800; color: var(--text-color);
@@ -160,6 +192,38 @@ MODEL_FILES = {
     "SVM": "svm_pipeline.pkl",
     "KNN": "knn_pipeline.pkl",
 }
+
+
+CAT_MEME_DIR = APP_DIR / "assets" / "cat_memes"
+
+CAT_MEME_FILES = {
+    "Insufficient_Weight": "cat_insufficient_weight.png",
+    "Normal_Weight": "cat_normal_weight.png",
+    "Overweight_Level_I": "cat_overweight_level_i.png",
+    "Overweight_Level_II": "cat_overweight_level_ii.png",
+    "Obesity_Type_I": "cat_obesity_type_i.png",
+    "Obesity_Type_II": "cat_obesity_type_ii.png",
+    "Obesity_Type_III": "cat_obesity_type_iii.png",
+}
+
+
+def load_cat_meme_data_uri(obesity_level):
+
+    filename = CAT_MEME_FILES.get(obesity_level)
+
+    if not filename:
+        return None, None
+
+    image_path = CAT_MEME_DIR / filename
+
+    if not image_path.is_file():
+        return None, filename
+
+    encoded_image = base64.b64encode(
+        image_path.read_bytes()
+    ).decode("ascii")
+
+    return f"data:image/png;base64,{encoded_image}", filename
 
 
 # ============================================================
@@ -1603,15 +1667,43 @@ if active_page == PAGE_PREDICT:
                 "🎯 Prediction Result"
             )
 
-            st.metric(
+            predicted_level_display = pred_label.replace(
+                "_",
+                " ",
+            )
 
-                "Predicted Obesity Level",
+            cat_meme_uri, cat_meme_filename = load_cat_meme_data_uri(
+                pred_label
+            )
 
-                pred_label.replace(
-                    "_",
-                    " "
+            if cat_meme_uri:
+                cat_meme_popup = (
+                    '<span class="cat-meme-popup">'
+                    f'<img src="{cat_meme_uri}" alt="Cat reaction for {predicted_level_display}">'
+                    f'<span class="cat-meme-caption">Cat reaction: {predicted_level_display}</span>'
+                    '</span>'
+                )
+            else:
+                cat_meme_popup = (
+                    '<span class="cat-meme-popup cat-meme-missing">'
+                    f'Upload <strong>{cat_meme_filename}</strong> to display this cat reaction.'
+                    '</span>'
                 )
 
+            prediction_level_html = (
+                '<div class="prediction-level-block">'
+                '<div class="prediction-level-label">Predicted Obesity Level</div>'
+                '<div class="prediction-level-row">'
+                f'<span class="prediction-level-value">{predicted_level_display}</span>'
+                '<span class="cat-meme-trigger" tabindex="0" '
+                'aria-label="Hover to show the cat reaction meme">🐱'
+                f'{cat_meme_popup}</span>'
+                '</div></div>'
+            )
+
+            st.markdown(
+                prediction_level_html,
+                unsafe_allow_html=True,
             )
 
             st.caption(
