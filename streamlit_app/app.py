@@ -878,8 +878,8 @@ if active_page == PAGE_PREDICT:
                 f'Q187 35 145 64 Z" fill="{hair_color}"></path>'
             )
             hair_front_svg = (
-                f'<path d="M142 80 A45 45 0 0 1 232 80 '
-                f'Q220 52 187 34 Q154 52 142 80 Z" fill="{hair_color}"></path>'
+                f'<path d="M142 84 A45 45 0 0 1 232 84 '
+                f'Q220 56 187 38 Q154 56 142 84 Z" fill="{hair_color}"></path>'
             )
 
             # Legs are emitted first; the skirt is drawn afterwards and covers their tops.
