@@ -108,12 +108,18 @@ st.markdown(
     .predicting-message .dot:nth-child(2) {animation-delay: .18s;}
     .predicting-message .dot:nth-child(3) {animation-delay: .36s;}
     @keyframes pulse-dot {0%, 65%, 100% {opacity: .2;} 30% {opacity: 1; transform: translateY(-2px);}}
-    .prediction-level-block {margin: .3rem 0 .9rem 0;}
+    div[data-testid="stMarkdownContainer"]:has(.prediction-level-block) {
+        position: relative; z-index: 100; overflow: visible;
+    }
+    .prediction-level-block {position: relative; z-index: 100; overflow: visible; margin: .3rem 0 .9rem 0;}
     .prediction-level-label {font-size: .9rem; color: var(--text-color); margin-bottom: .3rem;}
-    .prediction-level-row {display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;}
+    .prediction-level-row {
+        position: relative; display: flex; align-items: center; gap: .6rem;
+        flex-wrap: wrap; overflow: visible;
+    }
     .prediction-level-value {font-size: 2rem; line-height: 1.2; color: var(--text-color);}
     .cat-meme-trigger {
-        position: relative; display: inline-flex; align-items: center; justify-content: center;
+        position: relative; z-index: 101; display: inline-flex; align-items: center; justify-content: center;
         width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ef4444;
         color: #ef4444; background: rgba(239, 68, 68, .08); cursor: help;
         font-size: 1rem; line-height: 1; user-select: none; outline: none;
@@ -122,16 +128,16 @@ st.markdown(
         background: rgba(239, 68, 68, .16); transform: translateY(-1px);
     }
     .cat-meme-popup {
-        position: absolute; left: 0; top: calc(100% + 12px); z-index: 1000;
+        position: absolute; left: calc(100% + 14px); top: -18px; z-index: 10000;
         width: 230px; padding: .55rem; border-radius: 14px;
-        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .38);
-        box-shadow: 0 14px 32px rgba(15, 23, 42, .24); color: var(--text-color);
-        visibility: hidden; opacity: 0; transform: translateY(6px);
+        background: #ffffff; border: 1px solid #d7dde5;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, .28); color: #1f2937;
+        visibility: hidden; opacity: 0; transform: translateX(-6px);
         transition: opacity .18s ease, transform .18s ease; pointer-events: none;
     }
     .cat-meme-trigger:hover .cat-meme-popup,
     .cat-meme-trigger:focus .cat-meme-popup {
-        visibility: visible; opacity: 1; transform: translateY(0);
+        visibility: visible; opacity: 1; transform: translateX(0);
     }
     .cat-meme-popup img {
         display: block; width: 100%; max-height: 220px; object-fit: contain;
@@ -139,6 +145,14 @@ st.markdown(
     }
     .cat-meme-caption {display: block; margin-top: .4rem; font-size: .76rem; line-height: 1.3;}
     .cat-meme-missing {font-size: .76rem; line-height: 1.4; width: 205px;}
+    @media (max-width: 760px) {
+        .cat-meme-popup {
+            left: 0; top: calc(100% + 12px); width: min(230px, 72vw);
+            transform: translateY(6px);
+        }
+        .cat-meme-trigger:hover .cat-meme-popup,
+        .cat-meme-trigger:focus .cat-meme-popup {transform: translateY(0);}
+    }
     .prediction-section-title {
         display: flex; align-items: center; gap: .55rem; margin: .05rem 0 .15rem 0;
         font-size: 1.35rem; font-weight: 800; color: var(--text-color);
