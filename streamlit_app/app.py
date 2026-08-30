@@ -893,13 +893,13 @@ if active_page == PAGE_PREDICT:
         )
 
         if is_female:
-            # Long locks are drawn before the head and torso so they remain behind them.
+            # A continuous rear layer fills the space behind the neck and extends
+            # into long side sections. The head, neck and shirt are drawn above it.
             hair_back_svg = (
                 f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
-                f'<path d="M151 66 Q132 106 139 187 Q143 204 158 198 '
-                f'Q151 132 164 72 Z" fill="{hair_color}"></path>'
-                f'<path d="M223 66 Q242 106 235 187 Q231 204 216 198 '
-                f'Q223 132 210 72 Z" fill="{hair_color}"></path></g>'
+                f'<path d="M151 68 Q138 119 144 194 Q150 205 162 197 '
+                f'L212 197 Q224 205 230 194 Q236 119 223 68 '
+                f'Q187 41 151 68 Z" fill="{hair_color}"></path></g>'
             )
             hair_front_svg = (
                 f'<g transform="{hair_transform}" opacity="{hair_opacity_display}">'
@@ -926,10 +926,9 @@ if active_page == PAGE_PREDICT:
 
             # The waistband overlaps the shirt and joins both trouser legs to the torso.
             lower_body_svg = (
-                f'<rect x="128" y="218" width="56" height="71" rx="12" fill="{pants_color}"></rect>'
-                f'<rect x="190" y="218" width="56" height="71" rx="12" fill="{pants_color}"></rect>'
+                f'<rect x="128" y="218" width="59" height="71" rx="12" fill="{pants_color}"></rect>'
+                f'<rect x="187" y="218" width="59" height="71" rx="12" fill="{pants_color}"></rect>'
                 f'<rect x="124" y="207" width="126" height="35" rx="9" fill="{pants_color}"></rect>'
-                f'<line x1="187" y1="226" x2="187" y2="286" stroke="{shoe_color}" stroke-width="4"></line>'
                 f'<rect x="115" y="273" width="67" height="23" rx="10" fill="{shoe_color}"></rect>'
                 f'<rect x="192" y="273" width="67" height="23" rx="10" fill="{shoe_color}"></rect>'
             )
