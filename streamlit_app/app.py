@@ -112,6 +112,8 @@ st.markdown(
         font-size: 1.35rem; font-weight: 800; color: var(--text-color);
     }
     .prediction-section-note {color: var(--text-color); opacity: .68; margin: 0 0 .8rem 0; font-size: .92rem;}
+    .prediction-section-spacer {height: 2.75rem;}
+    .prediction-action-spacer {height: 1.5rem;}
     .input-visual {
         min-height: 96px; margin: .65rem 0 .55rem 0; padding: .8rem; border-radius: 14px;
         background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .28);
@@ -1030,6 +1032,12 @@ if active_page == PAGE_PREDICT:
 
 
     st.markdown(
+        '<div class="prediction-section-spacer"></div>',
+        unsafe_allow_html=True,
+    )
+
+
+    st.markdown(
         '<div class="prediction-section-title">🥗 Eating Habits</div>'
         '<div class="prediction-section-note">Each visual reflects the selected behaviour or frequency.</div>',
         unsafe_allow_html=True,
@@ -1167,6 +1175,12 @@ if active_page == PAGE_PREDICT:
                 calc,
                 "Alcohol consumption",
             )
+
+
+    st.markdown(
+        '<div class="prediction-section-spacer"></div>',
+        unsafe_allow_html=True,
+    )
 
 
     st.markdown(
@@ -1320,7 +1334,10 @@ if active_page == PAGE_PREDICT:
             )
 
 
-    st.markdown("")
+    st.markdown(
+        '<div class="prediction-action-spacer"></div>',
+        unsafe_allow_html=True,
+    )
 
     predict_col, restart_col = st.columns(2)
 
