@@ -596,11 +596,6 @@ NAVIGATION_OPTIONS = [
 def go_to_page(page_name):
     """Navigation callback used by the in-page 'view more' buttons."""
     st.session_state["active_page"] = page_name
-    if page_name in NAVIGATION_OPTIONS:
-        st.session_state["main_navigation"] = page_name
-def go_to_page(page_name):
-    """Navigation callback used by the in-page 'view more' buttons."""
-    st.session_state["active_page"] = page_name
     st.session_state["scroll_destination_to_top"] = True
     if page_name in NAVIGATION_OPTIONS:
         st.session_state["main_navigation"] = page_name
@@ -626,7 +621,6 @@ st.radio(
     on_change=select_main_page,
 )
 
-active_page = st.session_state["active_page"]
 active_page = st.session_state["active_page"]
 
 if st.session_state.pop("scroll_destination_to_top", False):
