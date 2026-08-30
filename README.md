@@ -139,13 +139,3 @@ To deploy on Streamlit Community Cloud: push `streamlit_app/` to GitHub and conn
   onto the required report sections (Business Understanding → Conclusion) — use them as your
   outline when writing the Google Docs report.
 
-## Still to do (outside this ZIP — these belong in your Google Docs report, not the code ZIP)
-
-- Write the **Executive Summary**, expand **Business Understanding** with your "increase in
-  obesity rate" article/statistics, and expand each notebook interpretation into full report
-  prose.
-- Add **5+ references (APA 7th edition)**, including 2 academic papers justifying model choice.
-- Take screenshots of the notebook's visuals/tables and paste them into the report (code
-  snippets are *not* required in the report per the spec).
-- Prepare your **30-minute presentation** (all members must participate).
-
