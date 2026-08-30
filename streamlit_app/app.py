@@ -845,28 +845,22 @@ if active_page == PAGE_PREDICT:
         shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
 
         if gender_value == "Female":
-            hair_back = """
-                        <path d="M143 83 A44 44 0 0 1 231 83 L231 164 Q216 154 207 128 L167 128 Q158 154 143 164 Z" fill="#384250"></path>
-            """
-            hair_front = """
-                        <path d="M147 80 A40 40 0 0 1 227 80 Q216 62 187 62 Q158 62 147 80 Z" fill="#384250"></path>
-            """
-            lower_body = f"""
-                        <rect x="151" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>
-                        <rect x="196" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>
-                        <path d="M139 204 L235 204 L264 258 Q187 275 110 258 Z" fill="{shirt_dark}"></path>
-                        <path d="M139 204 L235 204" stroke="{shirt_color}" stroke-width="7"></path>
-            """
+            hair_back = '<path d="M143 83 A44 44 0 0 1 231 83 L231 164 Q216 154 207 128 L167 128 Q158 154 143 164 Z" fill="#384250"></path>'
+            hair_front = '<path d="M147 80 A40 40 0 0 1 227 80 Q216 62 187 62 Q158 62 147 80 Z" fill="#384250"></path>'
+            lower_body = (
+                '<rect x="151" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
+                '<rect x="196" y="214" width="27" height="76" rx="12" fill="#f0b394"></rect>'
+                f'<path d="M139 204 L235 204 L264 258 Q187 275 110 258 Z" fill="{shirt_dark}"></path>'
+                f'<path d="M139 204 L235 204" stroke="{shirt_color}" stroke-width="7"></path>'
+            )
         else:
             hair_back = ""
-            hair_front = """
-                        <path d="M149 80 A38 38 0 0 1 225 80 L225 62 Q187 31 149 62 Z" fill="#384250"></path>
-            """
-            lower_body = """
-                        <rect x="128" y="210" width="56" height="79" rx="13" fill="#344054"></rect>
-                        <rect x="190" y="210" width="56" height="79" rx="13" fill="#344054"></rect>
-                        <line x1="187" y1="216" x2="187" y2="285" stroke="#252b37" stroke-width="4"></line>
-            """
+            hair_front = '<path d="M149 80 A38 38 0 0 1 225 80 L225 62 Q187 31 149 62 Z" fill="#384250"></path>'
+            lower_body = (
+                '<rect x="128" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
+                '<rect x="190" y="210" width="56" height="79" rx="13" fill="#344054"></rect>'
+                '<line x1="187" y1="216" x2="187" y2="285" stroke="#252b37" stroke-width="4"></line>'
+            )
 
         st.markdown(
             f"""
@@ -885,16 +879,16 @@ if active_page == PAGE_PREDICT:
                     <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
                     <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
-                        {hair_back}
+{hair_back}
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
-                        {hair_front}
+{hair_front}
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
                         <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
                         <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
-                        {lower_body}
+{lower_body}
                         <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                         <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                     </g>
