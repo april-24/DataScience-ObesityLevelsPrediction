@@ -124,7 +124,7 @@ st.markdown(
     .meter-icon {font-size: 1.65rem; filter: grayscale(1); opacity: .23; transition: all .2s ease;}
     .meter-icon.active {filter: none; opacity: 1; transform: translateY(-2px);}
     .profile-preview {
-        height: 100%; min-height: 455px; padding: 1.1rem; border-radius: 18px;
+        min-height: 455px; margin-bottom: 1.15rem; padding: 1.1rem; border-radius: 18px;
         background: var(--secondary-background-color);
         border: 1px solid rgba(148, 163, 184, .28); text-align: center;
     }
