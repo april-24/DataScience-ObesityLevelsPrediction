@@ -111,37 +111,29 @@ st.markdown(
         display: flex; align-items: center; gap: .55rem; margin: .05rem 0 .15rem 0;
         font-size: 1.35rem; font-weight: 800; color: var(--text-color);
     }
-    .prediction-section-note {color: #64748b; margin: 0 0 .8rem 0; font-size: .92rem;}
+    .prediction-section-note {color: var(--text-color); opacity: .68; margin: 0 0 .8rem 0; font-size: .92rem;}
     .input-visual {
-        min-height: 82px; margin-top: .45rem; padding: .7rem .8rem; border-radius: 14px;
-        background: rgba(248, 250, 252, .82); border: 1px solid rgba(148, 163, 184, .24);
-        text-align: center;
+        min-height: 96px; margin: .65rem 0 .55rem 0; padding: .8rem; border-radius: 14px;
+        background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .28);
+        text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .input-visual-label {font-size: .82rem; color: #64748b; margin-top: .35rem; font-weight: 650;}
+    .input-visual-label {font-size: .82rem; color: var(--text-color); opacity: .72; margin-top: .5rem; font-weight: 650;}
     .icon-row {display: flex; justify-content: center; align-items: center; gap: .55rem; min-height: 34px;}
     .meter-icon {font-size: 1.65rem; filter: grayscale(1); opacity: .23; transition: all .2s ease;}
     .meter-icon.active {filter: none; opacity: 1; transform: translateY(-2px);}
-    .visual-progress {height: 7px; border-radius: 999px; background: #e5e7eb; overflow: hidden; margin-top: .55rem;}
-    .visual-progress > span {display: block; height: 100%; border-radius: inherit;}
-    .frequency-row {display: flex; gap: .3rem; justify-content: center; flex-wrap: wrap;}
-    .frequency-step {
-        padding: .25rem .48rem; border-radius: 999px; border: 1px solid rgba(148,163,184,.35);
-        color: #64748b; font-size: .72rem; background: var(--secondary-background-color);
-    }
-    .frequency-step.active {background: #d15353; color: white; border-color: #d15353; font-weight: 750;}
     .profile-preview {
-        height: 100%; min-height: 365px; padding: 1rem; border-radius: 18px;
-        background: linear-gradient(180deg, rgba(248,250,252,.9), rgba(255,242,240,.75));
+        height: 100%; min-height: 455px; padding: 1.1rem; border-radius: 18px;
+        background: var(--secondary-background-color);
         border: 1px solid rgba(148, 163, 184, .28); text-align: center;
     }
-    .profile-preview-title {font-size: 1.05rem; font-weight: 800; color: #172033;}
-    .profile-preview-subtitle {font-size: .82rem; color: #64748b; margin-bottom: .25rem;}
+    .profile-preview-title {font-size: 1.08rem; font-weight: 800; color: var(--text-color);}
+    .profile-preview-subtitle {font-size: .82rem; color: var(--text-color); opacity: .68; margin-bottom: .25rem;}
     .profile-bmi {
         display: inline-flex; gap: .4rem; align-items: baseline; padding: .42rem .8rem;
-        border-radius: 12px; background: rgba(209,83,83,.10); color: #b53e42; margin-top: .2rem;
+        border-radius: 12px; background: rgba(209,83,83,.14); color: #e05858; margin-top: .35rem;
     }
     .profile-bmi strong {font-size: 1.35rem;}
-    .profile-disclaimer {font-size: .72rem; line-height: 1.35; color: #64748b; margin-top: .45rem;}
+    .profile-disclaimer {font-size: .72rem; line-height: 1.35; color: var(--text-color); opacity: .68; margin-top: .6rem;}
     .status-visual {font-size: 2rem; line-height: 1;}
     .status-chip {
         display: inline-block; margin-top: .45rem; padding: .25rem .6rem; border-radius: 999px;
@@ -742,6 +734,17 @@ if active_page == PAGE_PREDICT:
         )
 
 
+    def freq_button_label(x):
+
+        if x == "no":
+            return "Never"
+
+        if x == "Frequently":
+            return "Frequent"
+
+        return x
+
+
     def yes_no_label(x):
 
         return (
@@ -774,9 +777,6 @@ if active_page == PAGE_PREDICT:
             f"""
             <div class="input-visual">
                 <div class="icon-row">{icons}</div>
-                <div class="visual-progress">
-                    <span style="width:{progress * 100:.1f}%; background:{color};"></span>
-                </div>
                 <div class="input-visual-label">{label}</div>
             </div>
             """,
@@ -786,23 +786,10 @@ if active_page == PAGE_PREDICT:
 
     def render_frequency_visual(icon, selected_value, label):
 
-        steps = [
-            ("no", "Never"),
-            ("Sometimes", "Sometimes"),
-            ("Frequently", "Frequently"),
-            ("Always", "Always"),
-        ]
-
-        step_html = "".join(
-            f'<span class="frequency-step{" active" if raw == selected_value else ""}">{display}</span>'
-            for raw, display in steps
-        )
-
         st.markdown(
             f"""
             <div class="input-visual">
                 <div class="status-visual">{icon}</div>
-                <div class="frequency-row">{step_html}</div>
                 <div class="input-visual-label">{label}: {freq_label(selected_value)}</div>
             </div>
             """,
@@ -860,7 +847,7 @@ if active_page == PAGE_PREDICT:
             <div class="profile-preview">
                 <div class="profile-preview-title">Illustrative body profile</div>
                 <div class="profile-preview-subtitle">Updates from height and BMI</div>
-                <svg viewBox="0 0 330 315" width="100%" height="235" role="img"
+                <svg viewBox="0 0 330 315" width="100%" height="315" role="img"
                      aria-label="Illustrative body profile based on the entered height and BMI">
                     <defs>
                         <marker id="profile-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
@@ -870,7 +857,7 @@ if active_page == PAGE_PREDICT:
                     <line x1="38" y1="58" x2="38" y2="274" stroke="#aeb7c6" stroke-width="3"
                           marker-start="url(#profile-arrow)" marker-end="url(#profile-arrow)"></line>
                     <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
-                    <ellipse cx="187" cy="286" rx="110" ry="14" fill="#e5e7eb"></ellipse>
+                    <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
                         <path d="M149 75 A38 38 0 0 1 225 75 L225 63 A38 38 0 0 0 149 63 Z" fill="#384250"></path>
@@ -991,59 +978,47 @@ if active_page == PAGE_PREDICT:
         )
 
         personal_inputs, personal_preview = st.columns(
-            [1.35, 1],
+            [1, 1],
             gap="large",
         )
 
         with personal_inputs:
 
-            personal_row_1 = st.columns(2)
+            gender = st.radio(
+                "Gender",
+                cat_meta["Gender"],
+                horizontal=True,
+                format_func=lambda x: "👩 Female" if x == "Female" else "👨 Male",
+                key=f"gender_{reset_counter}",
+            )
 
-            with personal_row_1[0]:
+            age = st.number_input(
+                "Age (years)",
+                min_value=float(num_meta["Age"]["min"]),
+                max_value=100.0,
+                value=round(num_meta["Age"]["mean"], 1),
+                step=1.0,
+                key=f"age_{reset_counter}",
+            )
 
-                gender = st.radio(
-                    "Gender",
-                    cat_meta["Gender"],
-                    horizontal=True,
-                    format_func=lambda x: "👩 Female" if x == "Female" else "👨 Male",
-                    key=f"gender_{reset_counter}",
-                )
+            height = st.number_input(
+                "Height (m)",
+                min_value=float(num_meta["Height"]["min"]),
+                max_value=float(num_meta["Height"]["max"]) + 0.3,
+                value=round(num_meta["Height"]["mean"], 2),
+                step=0.01,
+                format="%.2f",
+                key=f"height_{reset_counter}",
+            )
 
-            with personal_row_1[1]:
-
-                age = st.number_input(
-                    "Age (years)",
-                    min_value=float(num_meta["Age"]["min"]),
-                    max_value=100.0,
-                    value=round(num_meta["Age"]["mean"], 1),
-                    step=1.0,
-                    key=f"age_{reset_counter}",
-                )
-
-            personal_row_2 = st.columns(2)
-
-            with personal_row_2[0]:
-
-                height = st.number_input(
-                    "Height (m)",
-                    min_value=float(num_meta["Height"]["min"]),
-                    max_value=float(num_meta["Height"]["max"]) + 0.3,
-                    value=round(num_meta["Height"]["mean"], 2),
-                    step=0.01,
-                    format="%.2f",
-                    key=f"height_{reset_counter}",
-                )
-
-            with personal_row_2[1]:
-
-                weight = st.number_input(
-                    "Weight (kg)",
-                    min_value=float(num_meta["Weight"]["min"]),
-                    max_value=float(num_meta["Weight"]["max"]) + 50,
-                    value=round(num_meta["Weight"]["mean"], 1),
-                    step=1.0,
-                    key=f"weight_{reset_counter}",
-                )
+            weight = st.number_input(
+                "Weight (kg)",
+                min_value=float(num_meta["Weight"]["min"]),
+                max_value=float(num_meta["Weight"]["max"]) + 50,
+                value=round(num_meta["Weight"]["mean"], 1),
+                step=1.0,
+                key=f"weight_{reset_counter}",
+            )
 
         with personal_preview:
 
@@ -1064,7 +1039,7 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_1[0]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             family_history = st.radio(
                 "Family history of overweight?",
@@ -1084,7 +1059,7 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_1[1]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             favc = st.radio(
                 "Frequently eats high-caloric food?",
@@ -1105,7 +1080,7 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_1[2]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             fcvc = st.slider(
                 "Vegetable consumption frequency",
@@ -1130,7 +1105,7 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_2[0]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             ncp = st.slider(
                 "Number of main meals per day",
@@ -1153,15 +1128,18 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_2[1]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
-            caec = st.select_slider(
+            caec = st.segmented_control(
                 "Eats food between meals?",
                 options=FREQUENCY_ORDER,
-                value="Sometimes",
-                format_func=freq_label,
+                default="Sometimes",
+                format_func=freq_button_label,
                 key=f"caec_{reset_counter}",
             )
+
+            if caec is None:
+                caec = "Sometimes"
 
             render_frequency_visual(
                 "🍪",
@@ -1171,15 +1149,18 @@ if active_page == PAGE_PREDICT:
 
     with eating_row_2[2]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
-            calc = st.select_slider(
+            calc = st.segmented_control(
                 "Alcohol consumption",
                 options=FREQUENCY_ORDER,
-                value="Sometimes",
-                format_func=freq_label,
+                default="Sometimes",
+                format_func=freq_button_label,
                 key=f"calc_{reset_counter}",
             )
+
+            if calc is None:
+                calc = "Sometimes"
 
             render_frequency_visual(
                 "🍷",
@@ -1198,7 +1179,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_1[0]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             smoke = st.radio(
                 "Smokes?",
@@ -1219,7 +1200,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_1[1]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             scc = st.radio(
                 "Monitors calorie intake?",
@@ -1238,7 +1219,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_1[2]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             ch2o = st.slider(
                 "Daily water intake",
@@ -1263,7 +1244,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_2[0]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             faf = st.slider(
                 "Physical activity frequency",
@@ -1286,7 +1267,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_2[1]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             tue = st.slider(
                 "Technology usage time",
@@ -1309,7 +1290,7 @@ if active_page == PAGE_PREDICT:
 
     with lifestyle_row_2[2]:
 
-        with st.container(border=True):
+        with st.container(border=True, height=280):
 
             mtrans = st.pills(
                 "Usual transportation mode",
@@ -2688,15 +2669,77 @@ if active_page == PAGE_HISTORY:
         )
 
 
+        history_display_df = history_df.copy()
+
+        history_display_df.insert(
+            0,
+            "Record",
+            range(1, len(history_display_df) + 1),
+        )
+
+
         st.dataframe(
 
-            history_df,
+            history_display_df,
 
             use_container_width=True,
 
             hide_index=True
 
         )
+
+
+        with st.expander(
+            "🗑️ Remove a specific prediction record"
+        ):
+
+            record_options = list(
+                range(len(st.session_state.prediction_history))
+            )
+
+
+            def history_record_label(record_index):
+
+                record = st.session_state.prediction_history[
+                    record_index
+                ]
+
+                return (
+                    f"Record {record_index + 1} — "
+                    f"{record.get('Predicted Obesity Level', 'Unknown')} | "
+                    f"{record.get('Model', 'Unknown model')} | "
+                    f"BMI {float(record.get('BMI', 0)):.2f}"
+                )
+
+
+            selected_history_index = st.selectbox(
+                "Choose the record to remove",
+                options=record_options,
+                format_func=history_record_label,
+                key="history_record_to_remove",
+            )
+
+            st.caption(
+                "Only the selected record will be removed. "
+                "The remaining history and chart will update automatically."
+            )
+
+            if st.button(
+                "Remove selected record",
+                type="secondary",
+                key="remove_selected_history_record",
+            ):
+
+                st.session_state.prediction_history.pop(
+                    selected_history_index
+                )
+
+                st.session_state.pop(
+                    "history_record_to_remove",
+                    None,
+                )
+
+                st.rerun()
 
 
         # ----------------------------------------------------
@@ -2771,6 +2814,11 @@ if active_page == PAGE_HISTORY:
         ):
 
             st.session_state.prediction_history = []
+
+            st.session_state.pop(
+                "history_record_to_remove",
+                None,
+            )
 
             st.rerun()
 
