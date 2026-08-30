@@ -822,7 +822,7 @@ if active_page == PAGE_PREDICT:
         )
 
 
-    def render_body_profile(height_value, weight_value, gender_value, age_value=None):
+    def render_body_profile(height_value, weight_value, gender_value):
 
         preview_bmi = weight_value / (height_value ** 2)
 
@@ -841,71 +841,16 @@ if active_page == PAGE_PREDICT:
         ))
 
         body_scale = 0.78 + (0.54 * body_progress)
-        is_female = gender_value == "Female"
-
-        shirt_color = "#e0629b" if is_female else "#3975d5"
-        shirt_dark = "#c14c81" if is_female else "#285da9"
-        hair_color = "#3b2a20"
-        skin_color = "#f0b394"
-        pants_color = "#344054"
-
-        # Hair amount: more hair when younger, thinning toward bald with age.
-        if age_value is None:
-            hair_amount = 1.0
-        else:
-            hair_amount = float(np.clip(
-                (70.0 - age_value) / (70.0 - 18.0),
-                0,
-                1,
-            ))
-
-        hair_opacity = round(hair_amount, 3)
-        bald_shine_opacity = round((1 - hair_amount) * 0.45, 3)
-
-        # Short hairline cap, shared by both, with length/fringe scaled by age.
-        cap_scale_y = round(0.55 + 0.45 * hair_amount, 3)
-        hair_svg = f"""
-        <g transform="translate(187 60) scale(1 {cap_scale_y}) translate(-187 -60)" opacity="{hair_opacity}">
-            <path d="M150 77 A37 37 0 0 1 224 77 L224 69 Q187 39 150 69 Z" fill="{hair_color}"></path>
-        </g>
-        <ellipse cx="180" cy="66" rx="15" ry="9" fill="#ffffff" opacity="{bald_shine_opacity}"></ellipse>
-        """
-
-        if is_female:
-            # Long hair flowing past the shoulders, thinning/shortening with age.
-            long_hair_scale = round(0.5 + 0.5 * hair_amount, 3)
-            hair_svg += f"""
-            <g transform="translate(187 130) scale(1 {long_hair_scale}) translate(-187 -130)" opacity="{hair_opacity}">
-                <path d="M150 70 Q131 128 142 196 Q153 202 160 190 Q151 130 163 72 Z" fill="{hair_color}"></path>
-                <path d="M224 70 Q243 128 232 196 Q221 202 214 190 Q223 130 211 72 Z" fill="{hair_color}"></path>
-            </g>
-            """
-
-        # Skirt for female (bare lower legs below the hem); trousers for male.
-        if is_female:
-            lower_body_svg = f"""
-            <path d="M139 207 L235 207 L262 262 L112 262 Z" fill="{shirt_dark}"></path>
-            <rect x="128" y="248" width="52" height="40" rx="13" fill="{skin_color}"></rect>
-            <rect x="194" y="248" width="52" height="40" rx="13" fill="{skin_color}"></rect>
-            <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-            <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-            """
-        else:
-            lower_body_svg = f"""
-            <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
-            <rect x="128" y="238" width="52" height="50" rx="13" fill="{pants_color}"></rect>
-            <rect x="194" y="238" width="52" height="50" rx="13" fill="{pants_color}"></rect>
-            <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-            <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
-            """
+        shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
+        shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
 
         st.markdown(
             f"""
             <div class="profile-preview">
                 <div class="profile-preview-title">Illustrative body profile</div>
-                <div class="profile-preview-subtitle">Updates from height, BMI, gender and age</div>
+                <div class="profile-preview-subtitle">Updates from height and BMI</div>
                 <svg viewBox="0 0 330 315" width="100%" height="315" role="img"
-                     aria-label="Illustrative body profile based on the entered height, BMI, gender and age">
+                     aria-label="Illustrative body profile based on the entered height and BMI">
                     <defs>
                         <marker id="profile-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
                             <path d="M0,0 L7,3.5 L0,7 Z" fill="#aeb7c6"></path>
@@ -916,15 +861,19 @@ if active_page == PAGE_PREDICT:
                     <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
                     <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
-                        <circle cx="187" cy="78" r="38" fill="{skin_color}"></circle>
-                        {hair_svg}
-                        <rect x="173" y="107" width="28" height="25" rx="7" fill="{skin_color}"></rect>
+                        <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
+                        <path d="M150 77 A37 37 0 0 1 224 77 L224 69 Q187 39 150 69 Z" fill="#384250"></path>
+                        <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
-                        {lower_body_svg}
-                        <rect x="92" y="132" width="39" height="108" rx="19" fill="{skin_color}"></rect>
-                        <rect x="243" y="132" width="39" height="108" rx="19" fill="{skin_color}"></rect>
+                        <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
+                        <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
+                        <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
                         <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
+                        <rect x="128" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="194" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
+                        <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                     </g>
                 </svg>
                 <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
@@ -1079,7 +1028,6 @@ if active_page == PAGE_PREDICT:
                 height,
                 weight,
                 gender,
-                age,
             )
 
 
