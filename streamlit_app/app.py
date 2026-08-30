@@ -596,7 +596,6 @@ NAVIGATION_OPTIONS = [
 def go_to_page(page_name):
     """Navigation callback used by the in-page 'view more' buttons."""
     st.session_state["active_page"] = page_name
-    st.session_state["scroll_destination_to_top"] = True
     if page_name in NAVIGATION_OPTIONS:
         st.session_state["main_navigation"] = page_name
 
@@ -622,40 +621,6 @@ st.radio(
 )
 
 active_page = st.session_state["active_page"]
-
-if st.session_state.pop("scroll_destination_to_top", False):
-    components.html(
-        """
-        <script>
-        (() => {
-            const scrollToTop = () => {
-                const parentWindow = window.parent;
-                const parentDocument = parentWindow.document;
-                parentWindow.scrollTo({top: 0, left: 0, behavior: "instant"});
-
-                [
-                    parentDocument.documentElement,
-                    parentDocument.body,
-                    parentDocument.querySelector("section.main"),
-                    parentDocument.querySelector('[data-testid="stAppViewContainer"]')
-                ].forEach((element) => {
-                    if (!element) return;
-                    element.scrollTop = 0;
-                    if (typeof element.scrollTo === "function") {
-                        element.scrollTo({top: 0, left: 0, behavior: "instant"});
-                    }
-                });
-            };
-
-            scrollToTop();
-            requestAnimationFrame(scrollToTop);
-            [100, 300, 700].forEach((delay) => setTimeout(scrollToTop, delay));
-        })();
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
 
 
 # ============================================================
