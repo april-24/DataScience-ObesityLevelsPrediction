@@ -784,6 +784,15 @@ if active_page == PAGE_PREDICT:
             """,
             unsafe_allow_html=True,
         )
+        st.markdown(
+            f"""
+            <div class="input-visual">
+                <div class="icon-row">{icons}</div>
+                <div class="input-visual-label">{label}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
     def render_frequency_visual(icon, selected_value, label):
@@ -865,6 +874,9 @@ if active_page == PAGE_PREDICT:
         st.markdown(
             f"""
             <div class="profile-preview">
+        st.html(
+            f"""
+            <div class="profile-preview">
                 <div class="profile-preview-title">Illustrative body profile</div>
                 <div class="profile-preview-subtitle">Updates from height and BMI</div>
                 <svg viewBox="0 0 330 315" width="100%" height="315" role="img"
@@ -904,6 +916,9 @@ if active_page == PAGE_PREDICT:
             </div>
             """,
             unsafe_allow_html=True,
+        )
+            </div>
+            """,
         )
 
 
