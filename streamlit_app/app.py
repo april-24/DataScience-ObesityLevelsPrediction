@@ -886,16 +886,17 @@ if active_page == PAGE_PREDICT:
                     <text x="21" y="168" fill="#64748b" font-size="13" transform="rotate(-90 21 168)">Height</text>
                     <ellipse cx="187" cy="286" rx="110" ry="14" fill="#94a3b8" opacity=".25"></ellipse>
                     <g transform="translate(187 282) scale({body_scale:.3f} {height_scale:.3f}) translate(-187 -282)">
-                        {hair_back}
-                        <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
-                        {hair_front}
+                                                <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
+                        <path d="M149 75 A38 38 0 0 1 225 75 L225 63 A38 38 0 0 0 149 63 Z" fill="#384250"></path>
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
+                        <path d="M139 207 L235 207 L257 254 L117 254 Z" fill="{shirt_dark}"></path>
                         <rect x="92" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="243" y="132" width="39" height="108" rx="19" fill="#f0b394"></rect>
                         <rect x="102" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
                         <rect x="229" y="126" width="43" height="58" rx="20" fill="{shirt_color}"></rect>
-                        {lower_body}
+                        <rect x="128" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
+                        <rect x="194" y="238" width="52" height="50" rx="13" fill="#344054"></rect>
                         <rect x="115" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                         <rect x="192" y="273" width="67" height="23" rx="10" fill="#252b37"></rect>
                     </g>
