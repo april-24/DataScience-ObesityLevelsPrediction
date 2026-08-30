@@ -53,14 +53,6 @@ st.markdown(
     """
     <style>
     .block-container {padding-top: 1.5rem; padding-bottom: 3rem;}
-    .hero-card {
-        padding: 1.6rem 1.8rem; border-radius: 22px;
-        background: linear-gradient(135deg, #fff7ed 0%, #ecfdf5 55%, #eff6ff 100%);
-        border: 1px solid rgba(15, 118, 110, .16);
-        box-shadow: 0 10px 28px rgba(15, 23, 42, .08); margin-bottom: 1rem;
-    }
-    .hero-card h2 {margin: 0 0 .45rem 0; color: #0f766e;}
-    .hero-card p {margin: 0; color: #334155; font-size: 1.02rem;}
     .team-card {
         min-height: 178px; padding: 1.15rem; border-radius: 18px;
         background: var(--secondary-background-color); border: 1px solid rgba(148, 163, 184, .30);
@@ -636,17 +628,6 @@ active_page = st.session_state["active_page"]
 # ============================================================
 
 if active_page == PAGE_ABOUT:
-
-    st.markdown(
-        """
-        <div class="hero-card">
-            <h2>🍎 Obesity Level Prediction</h2>
-            <p>An interactive BMDS2003 data-science project that connects lifestyle,
-            eating habits and physical condition with seven obesity-level categories.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     col1, col2 = st.columns(
         [2, 1]
