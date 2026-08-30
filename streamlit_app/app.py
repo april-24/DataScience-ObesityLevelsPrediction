@@ -850,6 +850,9 @@ if active_page == PAGE_PREDICT:
         ))
 
         body_scale = 0.78 + (0.54 * body_progress)
+        preview_bmi_display = f"{preview_bmi:.1f}"
+        body_scale_display = f"{body_scale:.3f}"
+        height_scale_display = f"{height_scale:.3f}"
         shirt_color = "#d15353" if gender_value == "Female" else "#3975d5"
         shirt_dark = "#b53e42" if gender_value == "Female" else "#285da9"
 
@@ -894,6 +897,7 @@ if active_page == PAGE_PREDICT:
 {hair_back}
                         <circle cx="187" cy="78" r="38" fill="#f0b394"></circle>
 {hair_front}
+                    <g transform="translate(187 282) scale({body_scale_display} {height_scale_display}) translate(-187 -282)">
                         <g transform="translate(0 0)">{hair_back}<circle cx="187" cy="78" r="38" fill="#f0b394"></circle>{hair_front}
                         <rect x="173" y="107" width="28" height="25" rx="7" fill="#f0b394"></rect>
                         <rect x="119" y="125" width="136" height="98" rx="36" fill="{shirt_color}"></rect>
@@ -910,6 +914,7 @@ if active_page == PAGE_PREDICT:
                     </g>
                 </svg>
                 <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi:.1f}</strong><span>kg/m²</span></div>
+                <div class="profile-bmi"><span>Preview BMI</span><strong>{preview_bmi_display}</strong><span>kg/m²</span></div>
                 <div class="profile-disclaimer">
                     Simplified visualisation only. It is not an anatomically accurate or medical representation.
                 </div>
